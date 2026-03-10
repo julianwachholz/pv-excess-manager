@@ -1,0 +1,20 @@
+frontend:
+config:
+http:
+websocket_api:
+auth:
+lovelace:
+sun:
+energy:
+history:
+logbook:
+
+# https://www.home-assistant.io/integrations/homeassistant/
+homeassistant:
+  debug: true
+
+# https://www.home-assistant.io/integrations/logger/
+logger:
+  default: info
+  logs:
+    custom_components.pv_excess_manager: debug

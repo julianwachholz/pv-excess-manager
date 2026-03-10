@@ -1,0 +1,11 @@
+{
+  "domain": "pv_excess_manager",
+  "name": "PV Excess Manager",
+  "codeowners": ["@julianwachholz"],
+  "config_flow": true,
+  "documentation": "https://github.com/julianwachholz/pv-excess-manager",
+  "integration_type": "device",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/julianwachholz/pv-excess-manager/issues",
+  "version": "0.1.0"
+}

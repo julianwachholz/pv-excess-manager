@@ -1,0 +1,282 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Device is already configured"
+    },
+    "step": {
+      "user": {
+        "title": "Add device",
+        "data": {
+          "name": "Name",
+          "device_type": "Device type"
+        },
+        "data_description": {
+          "name": "A friendly name for this device.",
+          "device_type": "Select whether this is a basic on/off device or a variable-power device."
+        }
+      },
+      "device_main": {
+        "title": "Main configuration",
+        "data": {
+          "refresh_period_sec": "Refresh period",
+          "grid_consumption_entity_id": "Grid consumption entity",
+          "power_production_entity_id": "Power production entity",
+          "subscribe_to_events": "Subscribe to state-change events",
+          "battery_soc_entity_id": "Battery state of charge entity",
+          "battery_consumption_entity_id": "Battery consumption entity",
+          "reset_time": "Daily reset time"
+        },
+        "data_description": {
+          "refresh_period_sec": "How often (in seconds) the algorithm re-evaluates device states.",
+          "grid_consumption_entity_id": "Sensor reporting current grid import/export power (negative = export).",
+          "power_production_entity_id": "Sensor reporting total PV production power. Leave empty if not available.",
+          "subscribe_to_events": "When enabled, the algorithm also reacts immediately to sensor state-change events instead of only polling.",
+          "battery_soc_entity_id": "Sensor reporting the battery state of charge in percent. Leave empty if no battery is present.",
+          "battery_consumption_entity_id": "Sensor reporting current battery charge/discharge power. Leave empty if no battery is present.",
+          "reset_time": "Time of day at which daily runtimes are reset."
+        }
+      },
+      "device_basic": {
+        "title": "Basic device configuration",
+        "data": {
+          "name": "Name",
+          "entity_id": "Controlled entity",
+          "nominal_power": "Nominal power",
+          "power_sensor_entity_id": "Power sensor entity",
+          "check_usable_template": "Check usable template",
+          "delay_activate_min": "Activation delay",
+          "ontime_duration_min": "Minimum ON time",
+          "delay_deactivate_min": "Deactivation delay",
+          "offtime_duration_min": "Minimum OFF time",
+          "activate_actions": "Activation actions",
+          "deactivate_actions": "Deactivation actions",
+          "battery_min_soc": "Minimum battery SOC",
+          "standby_power": "Standby power threshold",
+          "min_daily_runtime": "Minimum daily runtime",
+          "max_daily_runtime": "Maximum daily runtime",
+          "offpeak_time": "Off-peak fallback time"
+        },
+        "data_description": {
+          "name": "A friendly name for this device.",
+          "entity_id": "The switch, boolean, or similar entity that physically turns this device on or off.",
+          "nominal_power": "Expected power consumption when the device is turned on (watts).",
+          "power_sensor_entity_id": "Sensor reporting the actual power consumption of this device. Used instead of nominal power once the device is on.",
+          "check_usable_template": "A template that evaluates to true when this device is eligible to be switched on.",
+          "delay_activate_min": "Minimum time (minutes) of sufficient excess power before the device is turned on.",
+          "ontime_duration_min": "Minimum time (minutes) the device must stay on after being activated.",
+          "delay_deactivate_min": "Minimum time (minutes) of insufficient excess power before the device is turned off.",
+          "offtime_duration_min": "Minimum time (minutes) the device must stay off after being deactivated.",
+          "activate_actions": "Actions to execute when the device is activated.",
+          "deactivate_actions": "Actions to execute when the device is deactivated.",
+          "battery_min_soc": "The battery must be at or above this state of charge (%) before this device may be switched on.",
+          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
+          "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
+          "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
+        }
+      },
+      "device_variable": {
+        "title": "Variable power device configuration",
+        "data": {
+          "name": "Name",
+          "entity_id": "Controlled entity",
+          "nominal_power": "Nominal power",
+          "power_sensor_entity_id": "Power sensor entity",
+          "power_entity_id": "Power control entity",
+          "power_max": "Maximum power",
+          "power_step": "Power step",
+          "duration_power_min": "Minimum duration per power level",
+          "check_usable_template": "Check usable template",
+          "delay_activate_min": "Activation delay",
+          "ontime_duration_min": "Minimum ON time",
+          "delay_deactivate_min": "Deactivation delay",
+          "offtime_duration_min": "Minimum OFF time",
+          "activate_actions": "Activation actions",
+          "deactivate_actions": "Deactivation actions",
+          "power_divide_factor": "Power divide factor",
+          "battery_min_soc": "Minimum battery SOC",
+          "standby_power": "Standby power threshold",
+          "min_daily_runtime": "Minimum daily runtime",
+          "max_daily_runtime": "Maximum daily runtime",
+          "offpeak_time": "Off-peak fallback time"
+        },
+        "data_description": {
+          "name": "A friendly name for this device.",
+          "entity_id": "The entity used to toggle the device on or off (optional for variable-only devices).",
+          "nominal_power": "Initial power level used when the device is first activated (watts).",
+          "power_sensor_entity_id": "Sensor reporting the actual power consumption of this device.",
+          "power_entity_id": "The number or input_number entity used to set the current power level of this device.",
+          "power_max": "Maximum allowed power for this device (watts).",
+          "power_step": "Increment by which the power is raised or lowered each cycle (watts).",
+          "duration_power_min": "Minimum time (minutes) the device must hold a power level before it is changed again.",
+          "check_usable_template": "A template that evaluates to true when this device is eligible to be switched on.",
+          "delay_activate_min": "Minimum time (minutes) of sufficient excess power before the device is turned on.",
+          "ontime_duration_min": "Minimum time (minutes) the device must stay on after being activated.",
+          "delay_deactivate_min": "Minimum time (minutes) of insufficient excess power before the device is turned off.",
+          "offtime_duration_min": "Minimum time (minutes) the device must stay off after being deactivated.",
+          "activate_actions": "Actions to execute when the device is activated.",
+          "deactivate_actions": "Actions to execute when the device is deactivated.",
+          "power_divide_factor": "Divide the excess power by this factor before applying it to the power control entity (e.g. for three-phase devices set to 3).",
+          "battery_min_soc": "The battery must be at or above this state of charge (%) before this device may be switched on.",
+          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
+          "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
+          "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "device_main": {
+        "title": "Main configuration",
+        "data": {
+          "refresh_period_sec": "Refresh period",
+          "grid_consumption_entity_id": "Grid consumption entity",
+          "power_production_entity_id": "Power production entity",
+          "subscribe_to_events": "Subscribe to state-change events",
+          "battery_soc_entity_id": "Battery state of charge entity",
+          "battery_consumption_entity_id": "Battery consumption entity",
+          "reset_time": "Daily reset time"
+        },
+        "data_description": {
+          "refresh_period_sec": "How often (in seconds) the algorithm re-evaluates device states.",
+          "grid_consumption_entity_id": "Sensor reporting current grid import/export power (negative = export).",
+          "power_production_entity_id": "Sensor reporting total PV production power. Leave empty if not available.",
+          "subscribe_to_events": "When enabled, the algorithm also reacts immediately to sensor state-change events instead of only polling.",
+          "battery_soc_entity_id": "Sensor reporting the battery state of charge in percent. Leave empty if no battery is present.",
+          "battery_consumption_entity_id": "Sensor reporting current battery charge/discharge power. Leave empty if no battery is present.",
+          "reset_time": "Time of day at which daily runtimes are reset."
+        }
+      },
+      "device_basic": {
+        "title": "Basic device configuration",
+        "data": {
+          "name": "Name",
+          "entity_id": "Controlled entity",
+          "nominal_power": "Nominal power",
+          "power_sensor_entity_id": "Power sensor entity",
+          "check_usable_template": "Check usable template",
+          "delay_activate_min": "Activation delay",
+          "ontime_duration_min": "Minimum ON time",
+          "delay_deactivate_min": "Deactivation delay",
+          "offtime_duration_min": "Minimum OFF time",
+          "activate_actions": "Activation actions",
+          "deactivate_actions": "Deactivation actions",
+          "battery_min_soc": "Minimum battery SOC",
+          "standby_power": "Standby power threshold",
+          "min_daily_runtime": "Minimum daily runtime",
+          "max_daily_runtime": "Maximum daily runtime",
+          "offpeak_time": "Off-peak fallback time"
+        },
+        "data_description": {
+          "name": "A friendly name for this device.",
+          "entity_id": "The switch, boolean, or similar entity that physically turns this device on or off.",
+          "nominal_power": "Expected power consumption when the device is turned on (watts).",
+          "power_sensor_entity_id": "Sensor reporting the actual power consumption of this device. Used instead of nominal power once the device is on.",
+          "check_usable_template": "A template that evaluates to true when this device is eligible to be switched on.",
+          "delay_activate_min": "Minimum time (minutes) of sufficient excess power before the device is turned on.",
+          "ontime_duration_min": "Minimum time (minutes) the device must stay on after being activated.",
+          "delay_deactivate_min": "Minimum time (minutes) of insufficient excess power before the device is turned off.",
+          "offtime_duration_min": "Minimum time (minutes) the device must stay off after being deactivated.",
+          "activate_actions": "Actions to execute when the device is activated.",
+          "deactivate_actions": "Actions to execute when the device is deactivated.",
+          "battery_min_soc": "The battery must be at or above this state of charge (%) before this device may be switched on.",
+          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
+          "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
+          "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
+        }
+      },
+      "device_variable": {
+        "title": "Variable power device configuration",
+        "data": {
+          "name": "Name",
+          "entity_id": "Controlled entity",
+          "nominal_power": "Nominal power",
+          "power_sensor_entity_id": "Power sensor entity",
+          "power_entity_id": "Power control entity",
+          "power_max": "Maximum power",
+          "power_step": "Power step",
+          "duration_power_min": "Minimum duration per power level",
+          "check_usable_template": "Check usable template",
+          "delay_activate_min": "Activation delay",
+          "ontime_duration_min": "Minimum ON time",
+          "delay_deactivate_min": "Deactivation delay",
+          "offtime_duration_min": "Minimum OFF time",
+          "activate_actions": "Activation actions",
+          "deactivate_actions": "Deactivation actions",
+          "power_divide_factor": "Power divide factor",
+          "battery_min_soc": "Minimum battery SOC",
+          "standby_power": "Standby power threshold",
+          "min_daily_runtime": "Minimum daily runtime",
+          "max_daily_runtime": "Maximum daily runtime",
+          "offpeak_time": "Off-peak fallback time"
+        },
+        "data_description": {
+          "name": "A friendly name for this device.",
+          "entity_id": "The entity used to toggle the device on or off (optional for variable-only devices).",
+          "nominal_power": "Initial power level used when the device is first activated (watts).",
+          "power_sensor_entity_id": "Sensor reporting the actual power consumption of this device.",
+          "power_entity_id": "The number or input_number entity used to set the current power level of this device.",
+          "power_max": "Maximum allowed power for this device (watts).",
+          "power_step": "Increment by which the power is raised or lowered each cycle (watts).",
+          "duration_power_min": "Minimum time (minutes) the device must hold a power level before it is changed again.",
+          "check_usable_template": "A template that evaluates to true when this device is eligible to be switched on.",
+          "delay_activate_min": "Minimum time (minutes) of sufficient excess power before the device is turned on.",
+          "ontime_duration_min": "Minimum time (minutes) the device must stay on after being activated.",
+          "delay_deactivate_min": "Minimum time (minutes) of insufficient excess power before the device is turned off.",
+          "offtime_duration_min": "Minimum time (minutes) the device must stay off after being deactivated.",
+          "activate_actions": "Actions to execute when the device is activated.",
+          "deactivate_actions": "Actions to execute when the device is deactivated.",
+          "power_divide_factor": "Divide the excess power by this factor before applying it to the power control entity (e.g. for three-phase devices set to 3).",
+          "battery_min_soc": "The battery must be at or above this state of charge (%) before this device may be switched on.",
+          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
+          "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
+          "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
+        }
+      }
+    }
+  },
+  "selector": {
+    "device_type": {
+      "options": {
+        "basic": "Basic (on/off)",
+        "variable": "Variable power"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "managed_power": {
+        "name": "Managed Power"
+      },
+      "virtual_excess_power": {
+        "name": "Virtual Excess Power"
+      },
+      "daily_runtime": {
+        "name": "Daily Runtime"
+      }
+    },
+    "switch": {
+      "active": {
+        "name": "Active"
+      },
+      "managed": {
+        "name": "Managed"
+      }
+    },
+    "number": {
+      "priority": {
+        "name": "Priority"
+      }
+    }
+  },
+  "services": {
+    "reset_device_runtime": {
+      "name": "Reset device runtime",
+      "description": "Reset the daily runtime counter for a managed device to zero."
+    }
+  }
+}

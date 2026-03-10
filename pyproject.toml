@@ -1,0 +1,43 @@
+[project]
+name = "pv-excess-manager"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14.2"
+dependencies = ["colorlog>=6.10.1", "homeassistant==2026.3.1", "ruff>=0.15.6"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 119
+
+[tool.ruff.lint]
+select = [
+    "D",   # pydocstyle
+    "E",   # pycodestyle errors
+    "EXE", # flake8-executable
+    "F",   # pyflakes
+    "I",   # isort
+    "PGH", # pygrep-hooks
+    "PL",  # Pylint
+    "PT",  # flake8-pytest-style
+    "RET", # flake8-return
+    "S",   # flake8-bandit
+    "SIM", # flake8-simplify
+    "UP",  # pyupgrade
+    "W",   # pycodestyle warnings
+]
+ignore = ["D1"]
+extend-select = ["D213"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
+
+
+[tool.ruff.lint.mccabe]
+max-complexity = 25
