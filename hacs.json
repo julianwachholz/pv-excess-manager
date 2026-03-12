@@ -1,5 +1,5 @@
 {
-    "name": "Integration blueprint",
-    "homeassistant": "2025.2.4",
+    "name": "PV Excess Manager",
+    "homeassistant": "2026.3.1",
     "hacs": "2.0.5"
 }

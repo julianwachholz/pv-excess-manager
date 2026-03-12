@@ -1,8 +1,8 @@
 """
-Custom integration to integrate integration_blueprint with Home Assistant.
+PV Excess Manager integration for Home Assistant.
 
 For more details about this integration, please refer to
-https://github.com/ludeeus/integration_blueprint
+https://github.com/julianwachholz/pv-excess-manager
 """
 
 from __future__ import annotations
