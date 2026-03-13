@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from . import const
 from .algorithm import PVExcessManagerAlgorithm
-from .util import get_power_state, name_to_unique_id
+from .util import get_power_state
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -166,7 +166,7 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
             device.set_requested_power(old_requested_power)
 
             # Add updated data to the result
-            result[name_to_unique_id(name)] = device
+            result[device.unique_id] = device
 
         result["managed_power"] = result["grid_consumption"] / 3
         result["virtual_excess_power"] = result["grid_consumption"] / 2

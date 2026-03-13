@@ -9,12 +9,11 @@ from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.setup import async_setup_component
 
 from .const import (
-    CONF_NAME,
+    CONF_UNIQUE_ID,
     DOMAIN,
     PLATFORMS,
 )
 from .coordinator import PVExcessManagerCoordinator
-from .util import name_to_unique_id
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -86,7 +85,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unloaded:
         coordinator = PVExcessManagerCoordinator.get_coordinator()
         if coordinator is not None:
-            coordinator.remove_device(name_to_unique_id(entry.data[CONF_NAME]))
+            unique_id = entry.data.get(CONF_UNIQUE_ID)
+            if unique_id:
+                coordinator.remove_device(unique_id)
     return unloaded
 
 

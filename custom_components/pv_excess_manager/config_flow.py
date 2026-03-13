@@ -1,6 +1,7 @@
 """Configuration for the integration setup GUI."""
 
 import logging
+import uuid
 
 import voluptuous as vol
 from homeassistant.config_entries import (
@@ -10,13 +11,13 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowHandler, FlowResult
+from homeassistant.data_entry_flow import FlowResult
 
-from . import const, exceptions
+from . import const
 from .config_schema import (
     basic_device_schema,
     main_schema,
-    types_schema_devices,
+    new_device_schema,
     variable_device_schema,
 )
 from .coordinator import PVExcessManagerCoordinator
@@ -90,21 +91,11 @@ class PVExcessManagerBaseConfigFlow:
         if not self._coordinator or not self._coordinator.is_main_config_done:
             return await self.async_step_device_main(user_input)
 
-        next_step = None
-        if user_input is not None:
-            if user_input.get(const.CONF_DEVICE_TYPE) == const.CONF_DEVICE_BASIC:
-                next_step = self.async_step_device_basic
-            elif user_input.get(const.CONF_DEVICE_TYPE) == const.CONF_DEVICE_VARIABLE:
-                next_step = self.async_step_device_variable
-            else:
-                msg = "Invalid device type"
-                raise exceptions.ConfigurationError(msg)
-
         return await self.show_step(
             "user",
-            types_schema_devices,
+            new_device_schema,
             user_input,
-            next_step,
+            self.async_step_finalize,
         )
 
     async def async_step_device_main(self, user_input: dict | None = None) -> FlowResult:
@@ -165,6 +156,7 @@ class PVExcessManagerConfigFlow(PVExcessManagerBaseConfigFlow, ConfigFlow, domai
     async def async_step_finalize(self, user_input: dict | None = None) -> ConfigFlowResult:
         """Finalise of the ConfigEntry creation."""
         logger.debug("ConfigFlow.async_finalize")
+        self._initial_data[const.CONF_UNIQUE_ID] = str(uuid.uuid4())
         return self.async_create_entry(
             title=self._initial_data[const.CONF_NAME],
             data=self._initial_data,
@@ -185,7 +177,7 @@ class PVExcessManagerOptionsFlow(PVExcessManagerBaseConfigFlow, OptionsFlow):
         We have the existing ConfigEntry as input.
 
         """
-        super().__init__(config_entry.data.copy())
+        super().__init__({**config_entry.data, **config_entry.options})
         logger.debug(
             "PVExcessManagerOptionsFlow entry_id: %s",
             config_entry.entry_id,
@@ -212,5 +204,8 @@ class PVExcessManagerOptionsFlow(PVExcessManagerBaseConfigFlow, OptionsFlow):
             self.config_entry.entry_id,
             self._initial_data,
         )
-        self.hass.config_entries.async_update_entry(self.config_entry, data=self._initial_data)
+        name = self._initial_data.get(const.CONF_NAME)
+        self.hass.config_entries.async_update_entry(
+            self.config_entry, data=self._initial_data, title=name
+        )
         return self.async_create_entry(title=None, data=None)

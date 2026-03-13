@@ -17,7 +17,6 @@ from homeassistant.util.dt import now
 
 from . import const
 from .coordinator import PVExcessManagerCoordinator
-from .util import name_to_unique_id
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -38,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     if entry.data[const.CONF_DEVICE_TYPE] == const.CONF_DEVICE_MAIN:
         return
 
-    unique_id = name_to_unique_id(entry.data[const.CONF_NAME])
+    unique_id = entry.data.get(const.CONF_UNIQUE_ID)
     device = coordinator.get_device_by_unique_id(unique_id)
     if device is None:
         logger.error(
@@ -80,7 +79,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     def __init__(self, coordinator, hass, device: ManagedDevice):
         logger.debug("Adding ManagedDeviceSwitch for %s", device.name)
-        idx = name_to_unique_id(device.name)
+        idx = device.unique_id
         super().__init__(coordinator, context=idx)
         self._hass: HomeAssistant = hass
         self._device = device
@@ -261,7 +260,7 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
     _device: ManagedDevice
 
     def __init__(self, hass: HomeAssistant, device: ManagedDevice):
-        name = name_to_unique_id(device.name)
+        name = device.unique_id
         self._hass: HomeAssistant = hass
         self._device = device
         self._attr_has_entity_name = True
