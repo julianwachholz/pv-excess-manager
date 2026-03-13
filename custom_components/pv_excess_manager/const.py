@@ -1,8 +1,97 @@
-"""Constants for pv_excess_manager."""
+"""Constants."""
 
-from logging import Logger, getLogger
+from datetime import time
 
-LOGGER: Logger = getLogger(__package__)
+from homeassistant.const import Platform
 
-DOMAIN = "pv_excess_manager"
-ATTRIBUTION = "Data provided by http://jsonplaceholder.typicode.com/"
+NAME = "PV Excess Manager"
+AUTHOR = "Julian Wachholz"
+DOMAIN = PV_EXCESS_MANAGER_DOMAIN = "pv_excess_manager"
+
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    # TODO: reenable
+    # Platform.SWITCH,
+    # Platform.INPUT_NUMBER,
+]
+
+CONFIG_VERSION = 1
+CONFIG_MINOR_VERSION = 1
+
+DEFAULT_REFRESH_PERIOD_SEC = 30
+DEFAULT_RESET_TIME = time(5)
+
+# Main configuration
+CONF_REFRESH_PERIOD_SEC = "refresh_period_sec"
+
+CONF_GRID_CONSUMPTION_ENTITY_ID = "grid_consumption_entity_id"
+CONF_POWER_PRODUCTION_ENTITY_ID = "power_production_entity_id"
+CONF_SUBSCRIBE_TO_EVENTS = "subscribe_to_events"
+
+CONF_BATTERY_SOC_ENTITY_ID = "battery_soc_entity_id"
+CONF_BATTERY_CONSUMPTION_ENTITY_ID = "battery_consumption_entity_id"
+
+CONF_RESET_TIME = "reset_time"
+
+
+# Device types for config flow
+CONF_DEVICE_TYPE = "device_type"
+CONF_DEVICE_MAIN = "main"
+CONF_DEVICE_BASIC = "basic"
+CONF_DEVICE_VARIABLE = "variable"
+CONF_ALL_CONFIG_TYPES = [
+    CONF_DEVICE_MAIN,
+    CONF_DEVICE_BASIC,
+    CONF_DEVICE_VARIABLE,
+]
+CONF_DEVICE_TYPES = [
+    CONF_DEVICE_BASIC,
+    CONF_DEVICE_VARIABLE,
+]
+
+
+# Device parameters
+CONF_NAME = "name"
+CONF_UNIQUE_ID = "unique_id"
+
+# Default power when a device is first turned on
+CONF_NOMINAL_POWER = "nominal_power"
+# Actual power consumption sensor
+CONF_POWER_SENSOR_ENTITY_ID = "power_sensor_entity_id"
+
+# Logic to check if the device is available
+CONF_CHECK_AVAILABLE_TEMPLATE = "check_available_template"
+
+# Minimum duration a device must remain in its on or off state once switched
+CONF_ONTIME_DURATION_MIN = "ontime_duration_min"
+CONF_OFFTIME_DURATION_MIN = "offtime_duration_min"
+DEFAULT_ONTIME_DURATION_MIN = 30
+
+# How is a device switched on or off?
+CONF_ACTIVATE_ACTIONS = "activate_actions"
+CONF_DEACTIVATE_ACTIONS = "deactivate_actions"
+
+# Variable power settings
+CONF_POWER_ENTITY_ID = "power_entity_id"
+CONF_POWER_MAX = "power_max"
+CONF_POWER_STEP = "power_step"
+DEFAULT_POWER_STEP = 230
+
+CONF_DURATION_POWER_MIN = "duration_power_min"
+CONF_CHANGE_POWER_SERVICE = "change_power_service"
+CONF_POWER_DIVIDE_FACTOR = "power_divide_factor"
+DEFAULT_CHANGE_POWER_SERVICE = "number.set_value"
+
+# Battery must have at least this SOC to allow use of this device
+CONF_BATTERY_MIN_SOC = "battery_min_soc"
+
+# Duration a device may run in a given day (resets at CONF_RESET_TIME)
+CONF_MIN_DAILY_RUNTIME = "min_daily_runtime"
+CONF_MAX_DAILY_RUNTIME = "max_daily_runtime"
+
+# Time to enable a device if its minimum ON-time for today has not yet been achieved
+CONF_OFFPEAK_TIME = "offpeak_time"
+
+
+# Service that resets the ON timer for all devices
+SERVICE_RESET_ON_TIME = "reset_device_on_time"
