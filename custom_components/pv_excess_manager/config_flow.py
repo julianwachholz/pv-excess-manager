@@ -97,8 +97,18 @@ class PVExcessManagerBaseConfigFlow:
             "user",
             new_device_schema,
             user_input,
-            self.async_step_finalize,
+            self._async_step_device_from_type,
         )
+
+    async def _async_step_device_from_type(self) -> FlowResult:
+        """Route to the appropriate device configuration step based on device type."""
+        device_type = self._initial_data.get(const.CONF_DEVICE_TYPE)
+        if device_type == const.CONF_DEVICE_BASIC:
+            return await self.async_step_device_basic()
+        if device_type == const.CONF_DEVICE_VARIABLE:
+            return await self.async_step_device_variable()
+        logger.warning("Unexpected device type %r, skipping device configuration step", device_type)
+        return await self.async_step_finalize()
 
     async def async_step_device_main(self, user_input: dict | None = None) -> FlowResult:
         """Handle the flow steps for main device."""
