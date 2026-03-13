@@ -352,13 +352,12 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
 
     @property
     def device_info(self) -> DeviceInfo | None:
-        # Retournez des informations sur le périphérique associé à votre entité
         return DeviceInfo(
-            entry_type=DeviceEntryType.SERVICE,
-            identifiers={(DOMAIN, self._device.name)},
-            name="PV Excess Manager-" + self._device.name,
-            manufacturer=DEVICE_MANUFACTURER,
-            model=DEVICE_MODEL,
+            entry_type=DeviceEntryType.DEVICE,
+            identifiers={(const.DOMAIN, self._device.name)},
+            name=f"{const.NAME}: {self._device.name}",
+            manufacturer=const.AUTHOR,
+            model=const.NAME,
         )
 
     @property

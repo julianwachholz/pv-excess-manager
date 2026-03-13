@@ -241,7 +241,6 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     @property
     def device_info(self) -> DeviceInfo | None:
-        # Retournez des informations sur le périphérique associé à votre entité
         return DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(const.DOMAIN, self._device.name)},

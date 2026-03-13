@@ -325,35 +325,42 @@ class ManagedDevice:
         """Check if the device is usable. The battery is checked optionally."""
         if self.daily_runtime >= self.max_daily_runtime:
             logger.debug(
-                "%s is not usable due to max_daily_runtime_min exceeded %d >= %d",
+                "%s not usable: daily_runtime %d >= %d max_daily_runtime",
                 self.name,
                 self.daily_runtime,
                 self.max_daily_runtime,
             )
-            result = False
-        else:
-            context = {}
-            _now = now()
-            result = self.check_usable_template.async_render(context)
-            if self.can_change_power:
-                result = result and _now >= self.locked_until
-            else:
-                result = result and _now >= self.locked_until
+            return False
 
-            if not result:
-                logger.debug("%s is not usable", self.name)
+        if self.check_usable_template is not None and not self.check_usable_template.async_render():
+            logger.debug("%s not usable: check_usable_template is false", self.name)
+            return False
 
-            if result and check_battery and self.battery_soc is not None and self.battery_min_soc is not None:
-                if self.battery_soc < self.battery_min_soc:
-                    result = False
-                    logger.debug(
-                        "%s is not usable due to battery soc threshold (%s < %s)",
-                        self.name,
-                        self.battery_soc,
-                        self.battery_min_soc,
-                    )
+        _now = now()
 
-        return result
+        if self.can_change_power and _now < self.power_locked_until:
+            logger.debug("%s is not usable due to power lock until %s", self.name, self.power_locked_until)
+            return False
+
+        if _now < self.locked_until:
+            logger.debug("%s is not usable due to lock until %s", self.name, self.locked_until)
+            return False
+
+        if (
+            check_battery
+            and self.battery_soc is not None
+            and self.battery_min_soc is not None
+            and self.battery_soc < self.battery_min_soc
+        ):
+            logger.debug(
+                "%s is not usable due to battery soc threshold (%s < %s)",
+                self.name,
+                self.battery_soc,
+                self.battery_min_soc,
+            )
+            return False
+
+        return True
 
     @property
     def is_usable(self) -> bool:
