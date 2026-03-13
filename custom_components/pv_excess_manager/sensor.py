@@ -38,7 +38,6 @@ from homeassistant.util.dt import now
 from . import const
 from .coordinator import PVExcessManagerCoordinator
 from .managed_device import ManagedDevice
-from .util import name_to_unique_id
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -74,10 +73,15 @@ async def async_setup_entry(
         await coordinator.configure(entry)
         return
 
-    device = coordinator.get_device_by_unique_id(name_to_unique_id(entry.data[const.CONF_NAME]))
-    if device is None:
+    device = coordinator.get_device_by_unique_id(entry.data.get(const.CONF_UNIQUE_ID))
+    if device is None and entry.data.get(const.CONF_NOMINAL_POWER):
         device = ManagedDevice(hass, entry.data, coordinator)
         coordinator.add_device(device)
+    elif device is None:
+        logger.debug(
+            "Device entry '%s' has no nominal_power yet - configure it via the options flow.",
+            entry.data.get(const.CONF_NAME),
+        )
 
     # entity1 = TodayOnTimeSensor(
     #     hass,
@@ -189,7 +193,7 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
     ) -> None:
         """Initialize the sensor"""
         self.hass = hass
-        idx = name_to_unique_id(device.name)
+        idx = device.unique_id
         self._attr_name = "On time today"
         self._attr_has_entity_name = True
         self.entity_id = f"{SENSOR_DOMAIN}.on_time_today_pv_excess_manager_{idx}"

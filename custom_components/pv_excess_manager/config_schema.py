@@ -18,8 +18,9 @@ from homeassistant.helpers import selector
 
 from . import const
 
-types_schema_devices = vol.Schema(
+new_device_schema = vol.Schema(
     {
+        vol.Required(const.CONF_NAME): selector.TextSelector(),
         vol.Required(
             const.CONF_DEVICE_TYPE,
             default=const.CONF_DEVICE_BASIC,
