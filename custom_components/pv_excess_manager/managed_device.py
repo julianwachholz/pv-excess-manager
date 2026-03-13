@@ -9,6 +9,7 @@ from homeassistant.components.light.const import DOMAIN as LIGHT_DOMAIN
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers.template import Template
 from homeassistant.util.dt import now
+from slugify import slugify
 
 from . import const
 from .exceptions import ConfigurationError
@@ -149,6 +150,11 @@ class ManagedDevice:
             msg = f"Configuration of device ${self.name} is incorrect. min daily runtime must be less than max."
             logger.error("%s - %s", self, msg)
             raise ConfigurationError(msg)
+
+    @property
+    def slug(self) -> str:
+        """Get a slug for this device."""
+        return slugify(self.name).replace(" ", "_")
 
     async def _apply_action(self, action_type: str, requested_power=None):
         """

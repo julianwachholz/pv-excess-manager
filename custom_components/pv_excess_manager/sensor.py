@@ -77,25 +77,28 @@ async def async_setup_entry(
     if device is None and entry.data.get(const.CONF_NOMINAL_POWER):
         device = ManagedDevice(hass, entry.data, coordinator)
         coordinator.add_device(device)
+        async_add_entities(
+            [
+                DailyRuntimeSensor(
+                    hass,
+                    coordinator,
+                    device,
+                )
+            ]
+        )
+
     elif device is None:
         logger.debug(
             "Device entry '%s' has no nominal_power yet - configure it via the options flow.",
             entry.data.get(const.CONF_NAME),
         )
 
-    # entity1 = TodayOnTimeSensor(
-    #     hass,
-    #     coordinator,
-    #     device,
-    # )
-    # async_add_entities([entity1])
-
     # Add services
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
-        const.SERVICE_RESET_ON_TIME,
+        const.SERVICE_RESET_RUNTIME,
         {},
-        "service_reset_on_time",
+        "service_reset_device_runtime",
     )
 
 
@@ -168,18 +171,22 @@ class VirtualExcessSensorEntity(PVExcessManagerSensor):
     _attr_native_unit_of_measurement = UnitOfPower.WATT
 
 
-# TODO
-class TodayOnTimeSensor(SensorEntity, RestoreEntity):
-    """Gives the duration in which the device was on for a day."""
+class DailyRuntimeSensor(SensorEntity, RestoreEntity):
+    """Track daily runtime of a device."""
+
+    icon = "mdi:timer-play"
+    device_class = SensorDeviceClass.DURATION
+    state_class = SensorStateClass.MEASUREMENT
+    native_unit_of_measurement = UnitOfTime.SECONDS
+    suggested_display_precision = 0
 
     _entity_component_unrecorded_attributes = SensorEntity._entity_component_unrecorded_attributes.union(
         frozenset(
             {
-                "max_on_time_per_day_sec",
-                "max_on_time_per_day_min",
-                "max_on_time_hms",
-                "on_time_hms",
-                "reset_time",
+                const.CONF_MAX_DAILY_RUNTIME,
+                const.CONF_RESET_TIME,
+                const.CONF_OFFPEAK_TIME,
+                "last_datetime_on",
                 "should_be_forced_offpeak",
             }
         )
@@ -191,50 +198,48 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
         coordinator: PVExcessManagerCoordinator,
         device: ManagedDevice,
     ) -> None:
-        """Initialize the sensor"""
+        """Initialize the sensor."""
         self.hass = hass
-        idx = device.unique_id
-        self._attr_name = "On time today"
+        self._attr_name = "Daily runtime"
         self._attr_has_entity_name = True
-        self.entity_id = f"{SENSOR_DOMAIN}.on_time_today_pv_excess_manager_{idx}"
-        self._attr_unique_id = "pv_excess_manager_on_time_today_" + idx
-        self._attr_native_value = None
-        self._entity_id = device.entity_id
-        self._device = device
+        self._attr_unique_id = f"pv_excess_manager_{device.slug}_daily_runtime"
+        self.entity_id = f"{SENSOR_DOMAIN}.{self._attr_unique_id}"
+
+        self._attr_native_value = 0
+        self._entity_id = device.slug
+        self.device = device
         self._coordinator = coordinator
-        self._last_datetime_on = None
+        self.last_datetime_on = None
         self._old_state = None
 
     async def async_added_to_hass(self) -> None:
-        """The entity have been added to hass, listen to state change of the underlying entity"""
+        """Start listening to state changes of the underlying entity."""
         await super().async_added_to_hass()
 
-        # Arme l'écoute de la première entité
         listener_cancel = async_track_state_change_event(
             self.hass,
             [self._entity_id],
-            self._on_state_change,
+            self.on_state_change,
         )
-        # desarme le timer lors de la destruction de l'entité
         self.async_on_remove(listener_cancel)
 
-        # Add listener to midnight to reset the counter
+        # Add listener to end of day cycle
         reset_time: time = self._coordinator.reset_time
         self.async_on_remove(
             async_track_time_change(
                 hass=self.hass,
-                action=self._on_midnight,
+                action=self.on_midnight,
                 hour=reset_time.hour,
                 minute=reset_time.minute,
                 second=0,
             )
         )
 
-        # Add a listener to calculate OnTime at each minute
+        # Add a listener to calculate runtime at each minute
         self.async_on_remove(
             async_track_time_interval(
                 self.hass,
-                self._on_update_on_time,
+                self.on_update_on_time,
                 interval=timedelta(minutes=1),
             )
         )
@@ -246,38 +251,36 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
             if old_state.state is not None and old_state.state != "unknown":
                 self._attr_native_value = round(float(old_state.state))
                 logger.info(
-                    "%s - read on_time from storage is %s",
+                    "%s - loaded runtime from storage is %s",
                     self,
                     self._attr_native_value,
                 )
 
             old_value = old_state.attributes.get("last_datetime_on")
             if old_value is not None:
-                self._last_datetime_on = datetime.fromisoformat(old_value)
+                self.last_datetime_on = datetime.fromisoformat(old_value)
 
         self.update_custom_attributes()
         self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self):
-        """Try to force backup of entity"""
+        """Try to force backup of entity."""
         logger.info(
-            "%s - force write before remove. on_time is %s",
+            "%s - force write before remove. runtime is %s",
             self,
             self._attr_native_value,
         )
-        # Force dump in background
         await restore_async_get(self.hass).async_dump_states()
 
     @callback
-    async def _on_state_change(self, event: Event) -> None:
-        """The entity have change its state"""
+    async def on_state_change(self, event: Event) -> None:
+        """Listen for entity state changes."""
         logger.info("Call of on_state_change at %s with event %s", now(), event)
 
         if not event.data:
             return
 
         new_state: State = event.data.get("new_state")
-        # old_state: State = event.data.get("old_state")
 
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             logger.debug("No available state. Event is ignored")
@@ -285,114 +288,81 @@ class TodayOnTimeSensor(SensorEntity, RestoreEntity):
 
         need_save = False
         # We search for the date of the event
-        new_state = self._device.is_active  # new_state.state == STATE_ON
-        # old_state = old_state is not None and old_state.state == STATE_ON
+        new_state = self.device.is_active  # new_state.state == STATE_ON
         if new_state and not self._old_state:
             logger.debug("The managed device becomes on - store the last_datetime_on")
-            self._last_datetime_on = now()
+            self.last_datetime_on = now()
             need_save = True
 
         if not new_state:
-            if self._old_state and self._last_datetime_on is not None:
+            if self._old_state and self.last_datetime_on is not None:
                 logger.debug("The managed device becomes off - increment the delta time")
-                self._attr_native_value += round((now() - self._last_datetime_on).total_seconds())
-            self._last_datetime_on = None
+                self._attr_native_value += round((now() - self.last_datetime_on).total_seconds())
+            self.last_datetime_on = None
             need_save = True
 
-        # On sauvegarde le nouvel état
+        # Save the new state
         if need_save:
             self._old_state = new_state
             self.update_custom_attributes()
             self.async_write_ha_state()
-            self._device.set_daily_runtime(self._attr_native_value)
+            self.device.set_daily_runtime(self._attr_native_value)
 
     @callback
-    async def _on_midnight(self, _=None) -> None:
-        """Called each day at midnight to reset the counter"""
+    async def on_midnight(self, _=None) -> None:
+        """Reset the counter at end of the day cycle."""
         self._attr_native_value = 0
 
-        logger.info("Call of _on_midnight to reset onTime")
+        logger.info("Call of on_midnight to reset runtime")
 
-        # reset _last_datetime_on to now if it was active. Here we lose the time on of yesterday but it is too late I can't do better.
-        # Else you will have two point with the same date and not the same value (one with value + duration and one with 0)
-        if self._last_datetime_on is not None:
-            self._last_datetime_on = now()
+        # reset _last_datetime_on to now if it was active
+        if self.last_datetime_on is not None:
+            self.last_datetime_on = now()
 
         self.update_custom_attributes()
         self.async_write_ha_state()
-        self._device.set_daily_runtime(self._attr_native_value)
+        self.device.set_daily_runtime(self._attr_native_value)
 
     @callback
-    async def _on_update_on_time(self, _=None) -> None:
-        """Called priodically to update the on_time sensor"""
-        logger.debug("Call of _on_update_on_time at %s", now())
+    async def on_update_on_time(self, _=None) -> None:
+        """Update the runtime sensor every minute."""
+        logger.debug("Call of on_update_on_time at %s", now())
 
-        if self._last_datetime_on is not None and self._device.is_active:
-            self._attr_native_value += round((now() - self._last_datetime_on).total_seconds())
-            self._last_datetime_on = now()
+        if self.last_datetime_on is not None and self.device.is_active:
+            self._attr_native_value += round((now() - self.last_datetime_on).total_seconds())
+            self.last_datetime_on = now()
             self.update_custom_attributes()
             self.async_write_ha_state()
 
-            self._device.set_daily_runtime(self._attr_native_value)
+            self.device.set_daily_runtime(self._attr_native_value)
 
     def update_custom_attributes(self):
-        """Add some custom attributes to the entity"""
-        self._attr_extra_state_attributes: dict(str, str) = {
-            "last_datetime_on": self._last_datetime_on,
-            "max_on_time_per_day_min": round(self._device.max_on_time_per_day_sec / 60),
-            "max_on_time_per_day_sec": self._device.max_on_time_per_day_sec,
-            "reset_time": self._coordinator.reset_time,
-            "should_be_forced_offpeak": self._device.should_be_forced_offpeak,
-            "offpeak_time": self._device.offpeak_time,
+        """Add custom attributes to the entity."""
+        self._attr_extra_state_attributes: dict = {
+            const.CONF_MAX_DAILY_RUNTIME: self.device.max_daily_runtime,
+            const.CONF_RESET_TIME: self._coordinator.reset_time,
+            const.CONF_OFFPEAK_TIME: self.device.offpeak_time,
+            "last_datetime_on": self.last_datetime_on,
+            "should_be_forced_offpeak": self.device.should_be_forced_offpeak,
         }
 
     @property
-    def icon(self) -> str | None:
-        return "mdi:timer-play"
-
-    @property
-    def device_info(self) -> DeviceInfo | None:
+    def device_info(self):
+        """Get device info."""
         return DeviceInfo(
             entry_type=DeviceEntryType.DEVICE,
-            identifiers={(const.DOMAIN, self._device.name)},
-            name=f"{const.NAME}: {self._device.name}",
+            identifiers={(const.DOMAIN, self.device.name)},
+            name=f"{const.NAME}: {self.device.name}",
             manufacturer=const.AUTHOR,
             model=const.NAME,
         )
-
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.DURATION
-
-    @property
-    def state_class(self) -> SensorStateClass | None:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        return UnitOfTime.SECONDS
-
-    @property
-    def suggested_display_precision(self) -> int | None:
-        """Return the suggested number of decimal digits for display."""
-        return 0
-
-    @property
-    def last_datetime_on(self) -> datetime | None:
-        """Returns the last_datetime_on"""
-        return self._last_datetime_on
 
     @property
     def get_attr_extra_state_attributes(self):
         """Get the extra state attributes for the entity"""
         return self._attr_extra_state_attributes
 
-    async def service_reset_on_time(self):
-        """Called by a service call:
-        service: sensor.reset_on_time
-        data:
-        target:
-            entity_id: pv_excess_manager.on_time_today_pv_excess_manager_<device name>
-        """
-        logger.info("%s - Calling service_reset_on_time", self)
-        await self._on_midnight()
+    async def service_reset_device_runtime(self):
+        """Listen for service calls to reset the runtime counter."""
+        logger.info("%s - Calling service_reset_device_runtime", self)
+        await self.on_midnight()

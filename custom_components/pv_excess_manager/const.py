@@ -93,5 +93,5 @@ CONF_MAX_DAILY_RUNTIME = "max_daily_runtime"
 CONF_OFFPEAK_TIME = "offpeak_time"
 
 
-# Service that resets the ON timer for all devices
-SERVICE_RESET_ON_TIME = "reset_device_on_time"
+# Service that resets the runtime for all devices
+SERVICE_RESET_RUNTIME = "reset_device_runtime"
