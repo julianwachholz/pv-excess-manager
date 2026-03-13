@@ -63,6 +63,7 @@ class ManagedDevice:
     duration_power: timedelta = timedelta(0)
     duration_offtime: timedelta = timedelta(0)
 
+    is_enabled: bool = True
     check_usable_template: Template | None = None
 
     # Device must not be changed before this time stamp
@@ -76,9 +77,9 @@ class ManagedDevice:
     battery_soc: float = 0
 
     daily_runtime: timedelta = timedelta(0)
-    _min_daily_runtime: timedelta | Template = None
-    _max_daily_runtime: timedelta | Template = None
-    offpeak_time: time
+    _min_daily_runtime: float | Template = 0
+    _max_daily_runtime: float | Template = 24 * 60
+    offpeak_time: time | None = None
 
     def __init__(
         self,
@@ -100,7 +101,7 @@ class ManagedDevice:
         self.power_sensor_entity_id = device_config.get(const.CONF_POWER_SENSOR_ENTITY_ID)
 
         # Attributes for variable power devices
-        self.power_max = device_config.get(const.CONF_POWER_MAX)
+        self.power_max = device_config.get(const.CONF_POWER_MAX) or 0
         self.power_step = device_config.get(const.CONF_POWER_STEP) or 0
         self.power_divide_factor = device_config.get(const.CONF_POWER_DIVIDE_FACTOR) or 1
         self.power_entity_id = device_config.get(const.CONF_POWER_ENTITY_ID)
@@ -127,10 +128,10 @@ class ManagedDevice:
         self.deactivate_actions = device_config.get(const.CONF_DEACTIVATE_ACTIONS)
         self.change_power_service = str(device_config.get(const.CONF_CHANGE_POWER_SERVICE))
 
-        self.battery_min_soc = device_config.get(const.CONF_BATTERY_MIN_SOC)
+        self.battery_min_soc = device_config.get(const.CONF_BATTERY_MIN_SOC) or 0
 
-        self.min_daily_runtime = device_config.get(const.CONF_MIN_DAILY_RUNTIME)
-        self.max_daily_runtime = device_config.get(const.CONF_MAX_DAILY_RUNTIME)
+        self.min_daily_runtime = device_config.get(const.CONF_MIN_DAILY_RUNTIME) or 0
+        self.max_daily_runtime = device_config.get(const.CONF_MAX_DAILY_RUNTIME) or 24 * 60
         self.offpeak_time = device_config.get(const.CONF_OFFPEAK_TIME)
 
         if self.is_active:
@@ -318,8 +319,7 @@ class ManagedDevice:
                     power_sensor_state,
                 )
                 device_active = False
-
-        return device_active
+        return True
 
     def check_usable(self, *, check_battery: bool = True) -> bool:
         """Check if the device is usable. The battery is checked optionally."""
@@ -343,14 +343,14 @@ class ManagedDevice:
             if not result:
                 logger.debug("%s is not usable", self.name)
 
-            if result and check_battery and self.battery_soc is not None and self.battery_soc_threshold is not None:
-                if self.battery_soc < self.battery_soc_threshold:
+            if result and check_battery and self.battery_soc is not None and self.battery_min_soc is not None:
+                if self.battery_soc < self.battery_min_soc:
                     result = False
                     logger.debug(
                         "%s is not usable due to battery soc threshold (%s < %s)",
                         self.name,
                         self.battery_soc,
-                        self.battery_soc_threshold,
+                        self.battery_min_soc,
                     )
 
         return result
@@ -373,18 +373,18 @@ class ManagedDevice:
             return False
 
         time = now().time()
-        if self.offpeak_time >= self._coordinator.reset_time:
+        if self.offpeak_time >= self.coordinator.reset_time:
             return (
-                (time >= self.offpeak_time or time < self._coordinator.reset_time)
-                and self.on_time_sec < self.max_daily_runtime
-                and self.on_time_sec < self.min_daily_runtime
+                (time >= self.offpeak_time or time < self.coordinator.reset_time)
+                and self.daily_runtime < self.max_daily_runtime
+                and self.daily_runtime < self.min_daily_runtime
             )
 
         return (
             time >= self.offpeak_time
-            and time < self._coordinator.reset_time
-            and self.on_time_sec < self.max_daily_runtime
-            and self.on_time_sec < self.min_daily_runtime
+            and time < self.coordinator.reset_time
+            and self.daily_runtime < self.max_daily_runtime
+            and self.daily_runtime < self.min_daily_runtime
         )
 
     @property
@@ -398,13 +398,18 @@ class ManagedDevice:
         return result
 
     @property
+    def can_change_power(self) -> bool:
+        """Check if the device can change its power."""
+        return self.power_max is not None and self.power_max > self.power_nominal
+
+    @property
     def power_max(self) -> float:
         """The maximum power of the managed device."""
         return get_template_or_value(self._power_max)
 
     @power_max.setter
     def power_max(self, value: float | Template):
-        self._power_max = convert_to_template_or_value(self.hass, value)
+        self._power_max = convert_to_template_or_value(self.hass, value) or 0
 
     @property
     def battery_min_soc(self) -> float:
@@ -413,7 +418,7 @@ class ManagedDevice:
 
     @battery_min_soc.setter
     def battery_min_soc(self, value: float | Template):
-        self._battery_min_soc = convert_to_template_or_value(self.hass, value)
+        self._battery_min_soc = convert_to_template_or_value(self.hass, value) or 0
 
     @property
     def min_daily_runtime(self) -> timedelta:
@@ -422,7 +427,7 @@ class ManagedDevice:
 
     @min_daily_runtime.setter
     def min_daily_runtime(self, value: float | Template):
-        self._min_daily_runtime = convert_to_template_or_value(self.hass, value)
+        self._min_daily_runtime = convert_to_template_or_value(self.hass, value) or 0
 
     @property
     def max_daily_runtime(self) -> timedelta:
@@ -431,9 +436,4 @@ class ManagedDevice:
 
     @max_daily_runtime.setter
     def max_daily_runtime(self, value: float | Template):
-        self._max_daily_runtime = convert_to_template_or_value(self.hass, value)
-
-    @property
-    def can_change_power(self) -> bool:
-        """Check if the device can change its power."""
-        return self.power_max > self.power_nominal
+        self._max_daily_runtime = convert_to_template_or_value(self.hass, value) or 0

@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from typing import TYPE_CHECKING
 
 import voluptuous as vol
 from homeassistant.config_entries import (
@@ -11,7 +12,6 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 
 from . import const
 from .config_schema import (
@@ -22,10 +22,12 @@ from .config_schema import (
 )
 from .coordinator import PVExcessManagerCoordinator
 
+if TYPE_CHECKING:
+    from homeassistant.data_entry_flow import FlowResult
+
 logger = logging.getLogger(__name__)
 
 
-# extends FlowHandler ?
 class PVExcessManagerBaseConfigFlow:
     """Base class that defines both config flow and options flow."""
 
@@ -50,7 +52,7 @@ class PVExcessManagerBaseConfigFlow:
         next_step_function,
     ):
         """Show a config flow step."""
-        logger.debug("Into ConfigFlow.async_step_%s user_input=%s", step_id, user_input)
+        logger.debug("ConfigFlow.async_step_%s user_input=%s", step_id, user_input)
 
         defaults = self._initial_data.copy()
         errors = {}
@@ -86,7 +88,7 @@ class PVExcessManagerBaseConfigFlow:
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Handle the flow steps."""
-        logger.debug("Into ConfigFlow.async_step_user user_input=%s", user_input)
+        logger.debug("ConfigFlow.async_step_user user_input=%s", user_input)
 
         if not self._coordinator or not self._coordinator.is_main_config_done:
             return await self.async_step_device_main(user_input)
@@ -101,7 +103,7 @@ class PVExcessManagerBaseConfigFlow:
     async def async_step_device_main(self, user_input: dict | None = None) -> FlowResult:
         """Handle the flow steps for main device."""
         logger.debug(
-            "Into ConfigFlow.async_step_device_main user_input=%s",
+            "ConfigFlow.async_step_device_main user_input=%s",
             user_input,
         )
 
@@ -118,7 +120,7 @@ class PVExcessManagerBaseConfigFlow:
 
     async def async_step_device_basic(self, user_input: dict | None = None) -> FlowResult:
         """Handle the flow steps for basic device."""
-        logger.debug("Into ConfigFlow.async_step_device_basic user_input=%s", user_input)
+        logger.debug("ConfigFlow.async_step_device_basic user_input=%s", user_input)
 
         return await self.show_step(
             "device_basic",
@@ -129,7 +131,7 @@ class PVExcessManagerBaseConfigFlow:
 
     async def async_step_device_variable(self, user_input: dict | None = None) -> FlowResult:
         """Handle the flow steps for variable device."""
-        logger.debug("Into ConfigFlow.async_step_device_variable user_input=%s", user_input)
+        logger.debug("ConfigFlow.async_step_device_variable user_input=%s", user_input)
 
         return await self.show_step(
             "device_variable",
@@ -186,7 +188,7 @@ class PVExcessManagerOptionsFlow(PVExcessManagerBaseConfigFlow, OptionsFlow):
     async def async_step_init(self, user_input=None):
         """Manage options."""
         logger.debug(
-            "Into OptionsFlowHandler.async_step_init user_input =%s",
+            "OptionsFlowHandler.async_step_init user_input =%s",
             user_input,
         )
 
@@ -206,6 +208,8 @@ class PVExcessManagerOptionsFlow(PVExcessManagerBaseConfigFlow, OptionsFlow):
         )
         name = self._initial_data.get(const.CONF_NAME)
         self.hass.config_entries.async_update_entry(
-            self.config_entry, data=self._initial_data, title=name
+            self.config_entry,
+            data=self._initial_data,
+            title=name,
         )
         return self.async_create_entry(title=None, data=None)

@@ -34,21 +34,6 @@ new_device_schema = vol.Schema(
     }
 )
 
-types_schema_devices = vol.Schema(
-    {
-        vol.Required(
-            const.CONF_DEVICE_TYPE,
-            default=const.CONF_DEVICE_BASIC,
-        ): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=const.CONF_DEVICE_TYPES,
-                translation_key="device_type",
-                mode=selector.SelectSelectorMode.LIST,
-            ),
-        ),
-    }
-)
-
 main_schema = vol.Schema(
     {
         vol.Required(
