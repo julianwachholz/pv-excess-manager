@@ -9,6 +9,8 @@ from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.setup import async_setup_component
 
 from .const import (
+    CONF_DEVICE_MAIN,
+    CONF_DEVICE_TYPE,
     CONF_UNIQUE_ID,
     DOMAIN,
     PLATFORMS,
@@ -66,6 +68,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})
 
+    # Recreate coordinator if it was reset (e.g. main config was deleted and re-added)
+    if hass.data[DOMAIN].get("coordinator") is None:
+        hass.data[DOMAIN]["coordinator"] = PVExcessManagerCoordinator(hass, None)
+
     # Register the update listener for this config entry
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
@@ -81,13 +87,33 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
+    is_main_config = entry.data.get(CONF_DEVICE_TYPE) == CONF_DEVICE_MAIN
+
+    # Prevent removing the main config while other device entries still exist
+    if is_main_config:
+        other_entries = [
+            e for e in hass.config_entries.async_entries(DOMAIN)
+            if e.entry_id != entry.entry_id
+        ]
+        if other_entries:
+            logger.warning(
+                "Cannot remove the main configuration while %d other device entr%s still exist. "
+                "Please remove all device entries first.",
+                len(other_entries),
+                "ies" if len(other_entries) != 1 else "y",
+            )
+            return False
+
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
-        coordinator = PVExcessManagerCoordinator.get_coordinator()
-        if coordinator is not None:
-            unique_id = entry.data.get(CONF_UNIQUE_ID)
-            if unique_id:
-                coordinator.remove_device(unique_id)
+        if is_main_config:
+            PVExcessManagerCoordinator.reset()
+        else:
+            coordinator = PVExcessManagerCoordinator.get_coordinator()
+            if coordinator is not None:
+                unique_id = entry.data.get(CONF_UNIQUE_ID)
+                if unique_id:
+                    coordinator.remove_device(unique_id)
     return unloaded
 
 
