@@ -122,7 +122,6 @@ class ManagedDevice:
             self.duration_offtime = timedelta(minutes=offtime_minutes)
 
         if template := device_config.get(const.CONF_CHECK_AVAILABLE_TEMPLATE):
-            breakpoint()  # do we already get a template instance?
             self.check_usable_template = Template(template, hass)
 
         self.locked_until = self.power_locked_until = now()
