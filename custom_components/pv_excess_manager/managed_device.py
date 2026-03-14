@@ -44,7 +44,7 @@ class ManagedDevice:
     coordinator: PVExcessManagerCoordinator
 
     name: str
-    entity_id: str
+    entity_id: str | None
     unique_id: str
 
     power_nominal: float
@@ -96,6 +96,7 @@ class ManagedDevice:
 
         self.name = str(device_config.get(const.CONF_NAME))
         self.unique_id = str(device_config.get(const.CONF_UNIQUE_ID))
+        self.entity_id = device_config.get(const.CONF_ENTITY_ID)
 
         self.power_nominal = float(device_config.get(const.CONF_NOMINAL_POWER) or 0)
         if self.power_nominal <= 0:

@@ -53,6 +53,9 @@ CONF_DEVICE_TYPES = [
 CONF_NAME = "name"
 CONF_UNIQUE_ID = "unique_id"
 
+# Entity that represents the ON/OFF state of the managed device
+CONF_ENTITY_ID = "entity_id"
+
 # Priority of a device in the cascade algorithm (lower value = higher priority)
 CONF_PRIORITY = "priority"
 DEFAULT_PRIORITY = 100

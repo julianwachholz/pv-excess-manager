@@ -130,6 +130,15 @@ main_schema = vol.Schema(
 basic_device_schema = vol.Schema(
     {
         vol.Required(const.CONF_NAME): str,
+        vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[
+                    SWITCH_DOMAIN,
+                    INPUT_BOOLEAN_DOMAIN,
+                    BUTTON_DOMAIN,
+                ]
+            )
+        ),
         vol.Required(const.CONF_NOMINAL_POWER): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=0,
@@ -215,6 +224,15 @@ basic_device_schema = vol.Schema(
 variable_device_schema = vol.Schema(
     {
         vol.Required(const.CONF_NAME): str,
+        vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[
+                    SWITCH_DOMAIN,
+                    INPUT_BOOLEAN_DOMAIN,
+                    BUTTON_DOMAIN,
+                ]
+            )
+        ),
         vol.Required(const.CONF_NOMINAL_POWER): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=0,

@@ -93,19 +93,19 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         self.entity_id = f"{SWITCH_DOMAIN}.pv_excess_manager_{idx}"
         self._attr_name = "Active"
         self._attr_unique_id = f"pv_excess_manager_active_{idx}"
-        self._power_sensor_entity_id = device.power_sensor_entity_id
+        self._device_entity_id = device.entity_id
         self._attr_is_on = device.is_active
 
     async def async_added_to_hass(self) -> None:
         """Register state-change and enable-state-change listeners."""
         await super().async_added_to_hass()
 
-        # Track the power-sensor entity if configured, to react immediately to state changes
-        if self._power_sensor_entity_id:
+        # Track the underlying device entity if configured, to react immediately to ON/OFF state changes
+        if self._device_entity_id:
             self.async_on_remove(
                 async_track_state_change_event(
                     self.hass,
-                    [self._power_sensor_entity_id],
+                    [self._device_entity_id],
                     self._on_state_change,
                 )
             )
