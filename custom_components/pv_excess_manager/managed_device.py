@@ -67,6 +67,8 @@ class ManagedDevice:
     is_enabled: bool = True
     check_usable_template: Template | None = None
 
+    priority: int = const.DEFAULT_PRIORITY
+
     # Device must not be changed before this time stamp
     locked_until: datetime
     power_locked_until: datetime
@@ -134,6 +136,8 @@ class ManagedDevice:
         self.min_daily_runtime = device_config.get(const.CONF_MIN_DAILY_RUNTIME) or 0
         self.max_daily_runtime = device_config.get(const.CONF_MAX_DAILY_RUNTIME) or 24 * 60
         self.offpeak_time = device_config.get(const.CONF_OFFPEAK_TIME)
+
+        self.priority = int(device_config.get(const.CONF_PRIORITY) or const.DEFAULT_PRIORITY)
 
         if self.is_active:
             self.requested_power = self.current_power = self.power_max if self.can_change_power else self.power_nominal
@@ -284,6 +288,11 @@ class ManagedDevice:
             self.name,
             power_entity_value,
         )
+
+    def set_priority(self, priority: int):
+        """Set the priority of the ManagedDevice."""
+        logger.info("%s - set priority=%s", self.name, priority)
+        self.priority = priority
 
     def set_enable(self, enable: bool):
         """Enable or disable the ManagedDevice for PV Excess Manager."""
