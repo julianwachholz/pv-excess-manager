@@ -11,8 +11,7 @@ DOMAIN = PV_EXCESS_MANAGER_DOMAIN = "pv_excess_manager"
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.INPUT_NUMBER,
-    # TODO: reenable
-    # Platform.SWITCH,
+    Platform.SWITCH,
 ]
 
 CONFIG_VERSION = 1
@@ -53,6 +52,9 @@ CONF_DEVICE_TYPES = [
 # Device parameters
 CONF_NAME = "name"
 CONF_UNIQUE_ID = "unique_id"
+
+# Entity that represents the ON/OFF state of the managed device
+CONF_ENTITY_ID = "entity_id"
 
 # Priority of a device in the cascade algorithm (lower value = higher priority)
 CONF_PRIORITY = "priority"
@@ -99,3 +101,6 @@ CONF_OFFPEAK_TIME = "offpeak_time"
 
 # Service that resets the runtime for all devices
 SERVICE_RESET_RUNTIME = "reset_device_runtime"
+
+# Event fired when a device's enabled state changes
+EVENT_PV_EXCESS_MANAGER_ENABLE_STATE_CHANGE = "pv_excess_manager_enable_state_change"
