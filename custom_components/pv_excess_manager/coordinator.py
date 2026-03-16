@@ -36,7 +36,7 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
     battery_soc_entity_id: str | None
     battery_consumption_entity_id: str | None
 
-    reset_time: time
+    reset_time: time = const.DEFAULT_RESET_TIME
 
     def __init__(self, hass: HomeAssistant, config):
         PVExcessManagerCoordinator.hass = hass
@@ -75,7 +75,8 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
         self.battery_soc_entity_id = config.data.get(const.CONF_BATTERY_SOC_ENTITY_ID)
         self.battery_consumption_entity_id = config.data.get(const.CONF_BATTERY_CONSUMPTION_ENTITY_ID)
 
-        self.reset_time = config.data.get(const.CONF_RESET_TIME) or const.DEFAULT_RESET_TIME
+        if time_str := config.data.get(const.CONF_RESET_TIME):
+            self.reset_time = time.fromisoformat(time_str)
 
         self._main_config_done = True
 

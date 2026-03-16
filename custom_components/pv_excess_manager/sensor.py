@@ -350,7 +350,7 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
     def device_info(self):
         """Get device info."""
         return DeviceInfo(
-            entry_type=DeviceEntryType.DEVICE,
+            entry_type=DeviceEntryType.SERVICE,
             identifiers={(const.DOMAIN, self.device.name)},
             name=f"{const.NAME}: {self.device.name}",
             manufacturer=const.AUTHOR,
