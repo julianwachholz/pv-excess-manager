@@ -10,7 +10,7 @@ DOMAIN = PV_EXCESS_MANAGER_DOMAIN = "pv_excess_manager"
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
-    Platform.INPUT_NUMBER,
+    Platform.NUMBER,
     Platform.SWITCH,
 ]
 
@@ -91,6 +91,10 @@ DEFAULT_CHANGE_POWER_SERVICE = "number.set_value"
 # Battery must have at least this SOC to allow use of this device
 CONF_BATTERY_MIN_SOC = "battery_min_soc"
 
+# Delay thresholds to enable or disable a device
+CONF_DELAY_ACTIVATE_MIN = "delay_activate_min"
+CONF_DELAY_DEACTIVATE_MIN = "delay_deactivate_min"
+
 # Duration a device may run in a given day (resets at CONF_RESET_TIME)
 CONF_MIN_DAILY_RUNTIME = "min_daily_runtime"
 CONF_MAX_DAILY_RUNTIME = "max_daily_runtime"
@@ -102,5 +106,5 @@ CONF_OFFPEAK_TIME = "offpeak_time"
 # Service that resets the runtime for all devices
 SERVICE_RESET_RUNTIME = "reset_device_runtime"
 
-# Event fired when a device's enabled state changes
-EVENT_PV_EXCESS_MANAGER_ENABLE_STATE_CHANGE = "pv_excess_manager_enable_state_change"
+# Event fired when a device's managed state changes
+EVENT_PV_EXCESS_MANAGER_MANAGED_STATE_CHANGE = "pv_excess_manager_managed_state_change"

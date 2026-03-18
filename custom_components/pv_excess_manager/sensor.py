@@ -4,20 +4,9 @@ import logging
 from datetime import datetime, time, timedelta
 from typing import TYPE_CHECKING
 
-from homeassistant.components.sensor import (
-    DOMAIN as SENSOR_DOMAIN,
-)
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorStateClass,
-)
-from homeassistant.const import (
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
-    UnitOfPower,
-    UnitOfTime,
-)
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfPower, UnitOfTime
 from homeassistant.core import Event, HomeAssistant, State, callback
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -26,14 +15,11 @@ from homeassistant.helpers.event import (
     async_track_time_change,
     async_track_time_interval,
 )
-from homeassistant.helpers.restore_state import (
-    RestoreEntity,
-)
-from homeassistant.helpers.restore_state import (
-    async_get as restore_async_get,
-)
+from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.restore_state import async_get as restore_async_get
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import now
+from homeassistant.util.unit_conversion import DurationConverter
 
 from . import const
 from .coordinator import PVExcessManagerCoordinator
@@ -41,9 +27,7 @@ from .managed_device import ManagedDevice
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.helpers.entity_platform import (
-        AddEntitiesCallback,
-    )
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 
 logger = logging.getLogger(__name__)
@@ -111,6 +95,8 @@ class PVExcessManagerSensor(CoordinatorEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        logger.debug("Received update from coordinator for key %s", self.key)
+
         if not self.coordinator or not self.coordinator.data:
             logger.warning("Coordinator not set!")
             return
@@ -144,9 +130,9 @@ class ManagedPowerSensorEntity(PVExcessManagerSensor):
     """
 
     key = "managed_power"
-    icon: str = "mdi:flash"
-
+    _attr_icon = "mdi:flash"
     _attr_name = "Managed Power"
+
     _attr_unique_id = "pv_excess_manager_" + key
     _attr_device_class = SensorDeviceClass.POWER
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -162,23 +148,27 @@ class VirtualExcessSensorEntity(PVExcessManagerSensor):
     """
 
     key = "virtual_excess_power"
-    icon: str = "mdi:flash"
-
+    _attr_icon = "mdi:flash"
     _attr_name = "Virtual Excess Power"
+
     _attr_unique_id = "pv_excess_manager_" + key
     _attr_device_class = SensorDeviceClass.POWER
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfPower.WATT
 
 
+LAST_DATETIME_ON = "last_datetime_on"
+SHOULD_BE_FORCED_OFFPEAK = "should_be_forced_offpeak"
+
+
 class DailyRuntimeSensor(SensorEntity, RestoreEntity):
     """Track daily runtime of a device."""
 
-    icon = "mdi:timer-play"
-    device_class = SensorDeviceClass.DURATION
-    state_class = SensorStateClass.MEASUREMENT
-    native_unit_of_measurement = UnitOfTime.SECONDS
-    suggested_display_precision = 0
+    _attr_icon = "mdi:timer-play"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfTime.SECONDS
+    _attr_suggested_display_precision = 0
 
     _entity_component_unrecorded_attributes = SensorEntity._entity_component_unrecorded_attributes.union(
         frozenset(
@@ -186,8 +176,8 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
                 const.CONF_MAX_DAILY_RUNTIME,
                 const.CONF_RESET_TIME,
                 const.CONF_OFFPEAK_TIME,
-                "last_datetime_on",
-                "should_be_forced_offpeak",
+                LAST_DATETIME_ON,
+                SHOULD_BE_FORCED_OFFPEAK,
             }
         )
     )
@@ -200,16 +190,16 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
     ) -> None:
         """Initialize the sensor."""
         self.hass = hass
+        self._device = device
+        self._coordinator = coordinator
+
         self._attr_name = "Daily runtime"
         self._attr_has_entity_name = True
         self._attr_unique_id = f"pv_excess_manager_{device.slug}_daily_runtime"
         self.entity_id = f"{SENSOR_DOMAIN}.{self._attr_unique_id}"
 
-        self._attr_native_value = 0
-        self._entity_id = device.slug
-        self.device = device
-        self._coordinator = coordinator
         self.last_datetime_on = None
+        self._attr_native_value = 0
         self._old_state = None
 
     async def async_added_to_hass(self) -> None:
@@ -218,7 +208,7 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
 
         listener_cancel = async_track_state_change_event(
             self.hass,
-            [self._entity_id],
+            [self._device.entity_id],
             self.on_state_change,
         )
         self.async_on_remove(listener_cancel)
@@ -245,18 +235,23 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
         )
 
         # restore the last value or set to 0
-        self._attr_native_value = 0
         old_state = await self.async_get_last_state()
         if old_state is not None:
             if old_state.state is not None and old_state.state != "unknown":
-                self._attr_native_value = round(float(old_state.state))
+                # Maybe convert if unit was changed
+                value = DurationConverter.convert(
+                    float(old_state.state),
+                    old_state.attributes.get("unit_of_measurement"),
+                    UnitOfTime.SECONDS,
+                )
+                self._attr_native_value = value
                 logger.info(
                     "%s - loaded runtime from storage is %s",
-                    self,
+                    self._device.name,
                     self._attr_native_value,
                 )
 
-            old_value = old_state.attributes.get("last_datetime_on")
+            old_value = old_state.attributes.get(LAST_DATETIME_ON)
             if old_value is not None:
                 self.last_datetime_on = datetime.fromisoformat(old_value)
 
@@ -288,7 +283,7 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
 
         need_save = False
         # We search for the date of the event
-        new_state = self.device.is_active  # new_state.state == STATE_ON
+        new_state = self._device.is_active  # new_state.state == STATE_ON
         if new_state and not self._old_state:
             logger.debug("The managed device becomes on - store the last_datetime_on")
             self.last_datetime_on = now()
@@ -306,7 +301,7 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
             self._old_state = new_state
             self.update_custom_attributes()
             self.async_write_ha_state()
-            self.device.set_daily_runtime(self._attr_native_value)
+            self._device.daily_runtime = self._attr_native_value
 
     @callback
     async def on_midnight(self, _=None) -> None:
@@ -321,29 +316,27 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
 
         self.update_custom_attributes()
         self.async_write_ha_state()
-        self.device.set_daily_runtime(self._attr_native_value)
+        self._device.daily_runtime = self._attr_native_value
 
     @callback
     async def on_update_on_time(self, _=None) -> None:
         """Update the runtime sensor every minute."""
-        logger.debug("Call of on_update_on_time at %s", now())
-
-        if self.last_datetime_on is not None and self.device.is_active:
+        if self.last_datetime_on is not None and self._device.is_active:
             self._attr_native_value += round((now() - self.last_datetime_on).total_seconds())
             self.last_datetime_on = now()
             self.update_custom_attributes()
             self.async_write_ha_state()
 
-            self.device.set_daily_runtime(self._attr_native_value)
+            self._device.daily_runtime = self._attr_native_value
 
     def update_custom_attributes(self):
         """Add custom attributes to the entity."""
         self._attr_extra_state_attributes: dict = {
-            const.CONF_MAX_DAILY_RUNTIME: self.device.max_daily_runtime,
+            const.CONF_MAX_DAILY_RUNTIME: self._device._max_daily_runtime,
             const.CONF_RESET_TIME: self._coordinator.reset_time,
-            const.CONF_OFFPEAK_TIME: self.device.offpeak_time,
+            const.CONF_OFFPEAK_TIME: self._device.offpeak_time,
             "last_datetime_on": self.last_datetime_on,
-            "should_be_forced_offpeak": self.device.should_be_forced_offpeak,
+            "should_be_forced_offpeak": self._device.should_be_forced_offpeak(),
         }
 
     @property
@@ -351,8 +344,8 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
         """Get device info."""
         return DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
-            identifiers={(const.DOMAIN, self.device.name)},
-            name=f"{const.NAME}: {self.device.name}",
+            identifiers={(const.DOMAIN, self._device.name)},
+            name=f"{const.NAME}: {self._device.name}",
             manufacturer=const.AUTHOR,
             model=const.NAME,
         )
@@ -365,4 +358,5 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
     async def service_reset_device_runtime(self):
         """Listen for service calls to reset the runtime counter."""
         logger.info("%s - Calling service_reset_device_runtime", self)
+        await self.on_midnight()
         await self.on_midnight()

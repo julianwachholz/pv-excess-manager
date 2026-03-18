@@ -4,12 +4,8 @@ import logging
 from datetime import time, timedelta
 from typing import TYPE_CHECKING, Any, Self
 
-from homeassistant.helpers.event import (
-    async_track_state_change_event,
-)
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-)
+from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from . import const
 from .algorithm import PVExcessManagerAlgorithm
@@ -84,6 +80,12 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
         self.update_interval = timedelta(seconds=refresh_period)
         self._schedule_refresh()
 
+    def maybe_unsubscribe_events(self):
+        """Unsubscribe from events if we are currently subscribed."""
+        if self._unsubscribe_events is not None:
+            self._unsubscribe_events()
+            self._unsubscribe_events = None
+
     async def on_ha_started(self, _) -> None:
         """Listen the homeassistant_started event to initialize the first calculation."""
         logger.info("First initialization of PV Excess Manager")
@@ -98,25 +100,31 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
         result = {}
 
         # Add a device state attributes
-        for _, device in enumerate(self.devices):
+        for device in self.devices:
             # Initialize current power depending or reality
-            device.set_current_power_with_device_state()
+            device.update_current_power()
 
         result["grid_consumption"] = get_power_state(self.hass, self.grid_consumption_entity_id)
         if result["grid_consumption"] is None:
-            logger.warning("Grid consumption is not available. PV Excess Manager will be disabled.")
+            logger.warning(
+                "Grid consumption (%s) is not available. PV Excess Manager will be disabled.",
+                self.grid_consumption_entity_id,
+            )
             return None
 
         if self.power_production_entity_id:
             result["power_production"] = get_power_state(self.hass, self.power_production_entity_id)
             if result["power_production"] is None:
-                logger.warning("Power production is not available but highly recommended.")
+                logger.warning(
+                    "Power production (%s) is not available but highly recommended.",
+                    self.power_production_entity_id,
+                )
 
         if self.battery_soc_entity_id and self.battery_consumption_entity_id:
             result["battery_soc"] = get_power_state(self.hass, self.battery_soc_entity_id)
             result["battery_consumption"] = get_power_state(self.hass, self.battery_consumption_entity_id)
 
-        best_solution, total_power = PVExcessManagerAlgorithm.run_calculation(
+        target_action, total_requested, virtual_excess = PVExcessManagerAlgorithm.run_calculation(
             self.devices,
             result["grid_consumption"],
             result.get("power_production"),
@@ -124,55 +132,35 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
             result.get("battery_soc"),
         )
 
-        result["best_solution"] = best_solution
-        result["total_power"] = total_power
+        result["managed_power"] = total_requested
+        result["virtual_excess_power"] = virtual_excess
 
-        # Uses the result to turn on or off or change power
-        log = logger.debug
-        for _, equipment in enumerate(best_solution):
-            name = equipment[const.CONF_NAME]
-            requested_power = equipment.get("requested_power")
-            state = equipment["state"]
-            logger.debug("Dealing with best_solution for %s - %s", name, equipment)
-            device = self.get_device_by_name(name)
-            if not device:
-                continue
+        if target_action is None:
+            logger.info("No action to be taken.")
+            return result
 
-            old_requested_power = device.requested_power
-            is_active = device.is_active
-            should_force_offpeak = device.should_be_forced_offpeak
-            if should_force_offpeak:
-                logger.debug("%s - we should force %s name", self, name)
-            if is_active and not state and not should_force_offpeak:
-                logger.debug("Deactivating %s", name)
-                log = logger.info
-                old_requested_power = 0
-                await device.deactivate()
-            elif not is_active and (state or should_force_offpeak):
-                logger.debug("Activating %s", name)
-                log = logger.info
-                old_requested_power = requested_power
-                await device.activate(requested_power)
+        unique_id, requested_power = target_action
+        result["target_device"] = unique_id
+        result["target_power"] = requested_power
+        result[unique_id] = device
 
-            # Send change power if state is now on and change power is accepted and (power have change or eqt is just activated)
-            if state and device.can_change_power and (device.current_power != requested_power or not is_active):
-                logger.debug(
-                    "Change power of %s to %s",
-                    name,
-                    requested_power,
-                )
-                log = logger.info
-                await device.change_requested_power(requested_power)
+        device = self.get_device_by_unique_id(unique_id)
 
-            device.set_requested_power(old_requested_power)
+        if not device:
+            logger.warning("Device with unique_id %s not found. Action cannot be taken.", unique_id)
+            return result
 
-            # Add updated data to the result
-            result[device.unique_id] = device
+        if requested_power == 0:
+            logger.debug("Deactivating %s", device.name)
+            await device.deactivate()
+        elif not device.is_active:
+            logger.debug("Activating %s with %s W", device.name, requested_power)
+            await device.activate(requested_power)
+        else:
+            logger.debug("Change power of %s to %s W", device.name, requested_power)
+            await device.change_requested_power(requested_power)
 
-        result["managed_power"] = result["grid_consumption"] / 3
-        result["virtual_excess_power"] = result["grid_consumption"] / 2
-
-        log("Result: %s", result)
+        logger.info("Coordinator result: %s", result)
         return result
 
     @classmethod
@@ -197,6 +185,8 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
         ):
             return
 
+        if coordinator := PVExcessManagerCoordinator.hass.data[const.DOMAIN].get("coordinator"):
+            coordinator.maybe_unsubscribe_events()
         PVExcessManagerCoordinator.hass.data[const.DOMAIN]["coordinator"] = None
 
     @property

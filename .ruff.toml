@@ -4,17 +4,15 @@ target-version = "py314"
 line-length = 119
 
 [lint]
-select = [
-    "ALL",
-]
+select = ["ALL"]
 
 ignore = [
     "ANN201", # Missing return type annotation for public function
     "ANN202", # Missing return type annotation for private function
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
-    "D104", # Missing docstring in public package
-    "D203", # no-blank-line-before-class (incompatible with formatter)
-    "D212", # multi-line-summary-first-line (incompatible with formatter)
+    "D104",   # Missing docstring in public package
+    "D203",   # no-blank-line-before-class (incompatible with formatter)
+    "D212",   # multi-line-summary-first-line (incompatible with formatter)
     "COM812", # incompatible with formatter
     "ISC001", # incompatible with formatter
 ]

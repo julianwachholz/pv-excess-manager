@@ -4,6 +4,7 @@ import logging
 import math
 from typing import TYPE_CHECKING
 
+from homeassistant.const import UnitOfPower
 from homeassistant.helpers.template import Template, is_template_string
 from homeassistant.util.unit_conversion import PowerConverter
 from slugify import slugify
@@ -38,8 +39,11 @@ def get_power_state(hass: HomeAssistant, entity_id: str | None) -> float | None:
     value = float(state.state)
 
     if "device_class" in state.attributes and state.attributes["device_class"] == "power":
-        value = PowerConverter.convert(value, state.attributes["unit_of_measurement"], "W")
-
+        value = PowerConverter.convert(
+            value,
+            state.attributes["unit_of_measurement"],
+            UnitOfPower.WATT,
+        )
     return value if math.isfinite(value) else None
 
 

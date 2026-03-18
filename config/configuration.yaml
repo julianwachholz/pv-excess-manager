@@ -15,6 +15,6 @@ homeassistant:
 
 # https://www.home-assistant.io/integrations/logger/
 logger:
-  default: warning
+  default: info
   logs:
     custom_components.pv_excess_manager: debug

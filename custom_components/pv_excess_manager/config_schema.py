@@ -133,9 +133,13 @@ basic_device_schema = vol.Schema(
         vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[
-                    SWITCH_DOMAIN,
                     INPUT_BOOLEAN_DOMAIN,
-                    BUTTON_DOMAIN,
+                    SWITCH_DOMAIN,
+                    HUMIDIFIER_DOMAIN,
+                    CLIMATE_DOMAIN,
+                    FAN_DOMAIN,
+                    LIGHT_DOMAIN,
+                    SELECT_DOMAIN,
                 ]
             )
         ),
@@ -167,10 +171,28 @@ basic_device_schema = vol.Schema(
         vol.Optional(
             const.CONF_CHECK_AVAILABLE_TEMPLATE,
         ): selector.TemplateSelector(),
+        vol.Optional(const.CONF_DELAY_ACTIVATE_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
         vol.Optional(
             const.CONF_ONTIME_DURATION_MIN,
             default=const.DEFAULT_ONTIME_DURATION_MIN,
         ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Optional(const.CONF_DELAY_DEACTIVATE_MIN): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=0,
                 max=1440,
@@ -227,9 +249,13 @@ variable_device_schema = vol.Schema(
         vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[
-                    SWITCH_DOMAIN,
                     INPUT_BOOLEAN_DOMAIN,
-                    BUTTON_DOMAIN,
+                    SWITCH_DOMAIN,
+                    HUMIDIFIER_DOMAIN,
+                    CLIMATE_DOMAIN,
+                    FAN_DOMAIN,
+                    LIGHT_DOMAIN,
+                    SELECT_DOMAIN,
                 ]
             )
         ),
@@ -299,10 +325,28 @@ variable_device_schema = vol.Schema(
         vol.Optional(
             const.CONF_CHECK_AVAILABLE_TEMPLATE,
         ): selector.TemplateSelector(),
+        vol.Optional(const.CONF_DELAY_ACTIVATE_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
         vol.Optional(
             const.CONF_ONTIME_DURATION_MIN,
             default=const.DEFAULT_ONTIME_DURATION_MIN,
         ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Optional(const.CONF_DELAY_DEACTIVATE_MIN): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=0,
                 max=1440,
@@ -323,12 +367,8 @@ variable_device_schema = vol.Schema(
         vol.Required(const.CONF_ACTIVATE_ACTIONS): selector.ActionSelector(),
         vol.Required(const.CONF_DEACTIVATE_ACTIONS): selector.ActionSelector(),
         vol.Optional(
-            const.CONF_CHANGE_POWER_SERVICE,
-            default=const.DEFAULT_CHANGE_POWER_SERVICE,
-        ): str,
-        vol.Optional(
             const.CONF_POWER_DIVIDE_FACTOR,
-            default=const.DEFAULT_POWER_STEP,
+            default=1.0,
         ): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=1.0,

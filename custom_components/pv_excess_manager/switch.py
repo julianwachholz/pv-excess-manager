@@ -1,7 +1,5 @@
 """Switch entities for PV Excess Manager devices."""
 
-from __future__ import annotations
-
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -48,7 +46,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             ManagedDeviceSwitch(coordinator, hass, device),
-            ManagedDeviceEnable(hass, device),
+            ManagedDeviceManagedSwitch(hass, device),
         ]
     )
 
@@ -56,22 +54,26 @@ async def async_setup_entry(
 class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
     """Switch entity reflecting the active/inactive state of a managed device."""
 
-    _entity_component_unrecorded_attributes = SwitchEntity._entity_component_unrecorded_attributes.union(  # noqa: SLF001
+    coordinator: PVExcessManagerCoordinator
+
+    _attr_icon = "mdi:toggle-switch"
+    _attr_name = "Active"
+
+    _entity_component_unrecorded_attributes = SwitchEntity._entity_component_unrecorded_attributes.union(
         frozenset(
             {
-                "is_enabled",
+                "is_managed",
                 "is_active",
                 "is_waiting",
                 "is_usable",
-                "can_change_power",
-                "duration_ontime_sec",
-                "duration_power_sec",
+                # "can_change_power",
+                # "duration_ontime_sec",
+                # "duration_power_sec",
                 "power_nominal",
                 "power_max",
                 "locked_until",
                 "power_locked_until",
                 "battery_min_soc",
-                "battery_soc",
             }
         )
     )
@@ -84,53 +86,53 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
     ) -> None:
         """Initialize the managed device switch."""
         logger.debug("Adding ManagedDeviceSwitch for %s", device.name)
-        idx = device.unique_id
-        super().__init__(coordinator, context=idx)
+
+        super().__init__(coordinator, context=device.unique_id)
         self._hass = hass
         self._device = device
-        self.idx = idx
-        self._attr_has_entity_name = True
-        self.entity_id = f"{SWITCH_DOMAIN}.pv_excess_manager_{idx}"
+
         self._attr_name = "Active"
-        self._attr_unique_id = f"pv_excess_manager_active_{idx}"
-        self._device_entity_id = device.entity_id
+        self._attr_has_entity_name = True
+        self._attr_unique_id = f"pv_excess_manager_{device.slug}_active"
+        self.entity_id = f"{SWITCH_DOMAIN}.pv_excess_manager_{self._attr_unique_id}"
+
         self._attr_is_on = device.is_active
 
     async def async_added_to_hass(self) -> None:
-        """Register state-change and enable-state-change listeners."""
+        """Register state-change and managed-state-change listeners."""
         await super().async_added_to_hass()
 
         # Track the underlying device entity if configured, to react immediately to ON/OFF state changes
-        if self._device_entity_id:
+        if self._device.entity_id:
             self.async_on_remove(
                 async_track_state_change_event(
                     self.hass,
-                    [self._device_entity_id],
+                    [self._device.entity_id],
                     self._on_state_change,
                 )
             )
 
-        # React when the Enable switch toggles this device on or off
+        # React when the Managed switch toggles this device on or off
         self.async_on_remove(
             self.hass.bus.async_listen(
-                event_type=const.EVENT_PV_EXCESS_MANAGER_ENABLE_STATE_CHANGE,
-                listener=self._on_enable_state_change,
+                event_type=const.EVENT_PV_EXCESS_MANAGER_MANAGED_STATE_CHANGE,
+                listener=self._on_managed_state_change,
             )
         )
 
         self._update_custom_attributes(self._device)
 
     @callback
-    def _on_enable_state_change(self, event: Event) -> None:
-        """Update state when the device's enabled flag changes."""
-        if not event.data or event.data.get("device_unique_id") != self.idx:
+    def _on_managed_state_change(self, event: Event) -> None:
+        """Update state when the device's managed flag changes."""
+        if not event.data or event.data.get("device_unique_id") != self._device.unique_id:
             return
 
-        device = self.coordinator.get_device_by_unique_id(self.idx) if self.coordinator else None
+        device = self.coordinator.get_device_by_unique_id(self._device.unique_id) if self.coordinator else None
         if device is None:
             return
 
-        logger.info("Enable state changed for %s → %s", self.idx, device.is_enabled)
+        logger.info("Managed state changed for %s → %s", self._device.name, device.is_managed)
         self._update_custom_attributes(device)
         self.async_write_ha_state()
 
@@ -144,7 +146,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 
-        device = self.coordinator.get_device_by_unique_id(self.idx) if self.coordinator else None
+        device = self.coordinator.get_device_by_unique_id(self._device.unique_id) if self.coordinator else None
         if device is None:
             return
 
@@ -158,37 +160,47 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     def _update_custom_attributes(self, device: ManagedDevice) -> None:
         """Populate extra state attributes from the device."""
-        self._attr_extra_state_attributes: dict[str, Any] = {
-            "is_enabled": device.is_enabled,
+        extra_attrs = {
+            "is_managed": device.is_managed,
             "is_active": device.is_active,
-            "is_waiting": device.is_waiting,
+            "is_locked": device.is_locked,
             "is_usable": device.is_usable,
-            "can_change_power": device.can_change_power,
             "current_power": device.current_power,
             "requested_power": device.requested_power,
             "duration_ontime_sec": device.duration_ontime.total_seconds(),
-            "duration_power_sec": device.duration_power.total_seconds(),
+            "duration_offtime_sec": device.duration_offtime.total_seconds(),
             "power_nominal": device.power_nominal,
-            "power_max": device.power_max,
             "locked_until": device.locked_until.isoformat(),
-            "power_locked_until": device.power_locked_until.isoformat(),
             "battery_min_soc": device.battery_min_soc,
             "battery_soc": device.battery_soc,
             "device_name": device.name,
         }
+        if device.can_change_power:
+            extra_attrs.update(
+                {
+                    "can_change_power": device.can_change_power,
+                    "duration_power_sec": device.duration_power.total_seconds(),
+                    "power_max": device.power_max,
+                    "power_locked_until": device.power_locked_until.isoformat(),
+                }
+            )
+
+        self._attr_extra_state_attributes = extra_attrs
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        logger.debug("_handle_coordinator_update for %s", self._attr_name)
-
         if not self.coordinator or not self.coordinator.data:
-            logger.debug("No coordinator or data available")
+            logger.warning("Coordinator not set!")
             return
 
-        device: ManagedDevice | None = self.coordinator.data.get(self.idx)
+        device: ManagedDevice | None = self.coordinator.data.get(self._device.unique_id)
         if device is None:
-            logger.debug("Device %s not present in coordinator update", self.idx)
+            logger.debug(
+                "Device %s (%s) not present in coordinator update",
+                self._device.name,
+                self._device.unique_id,
+            )
             return
 
         self._attr_is_on = device.is_active
@@ -201,8 +213,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_on(self, **_kwargs: Any) -> None:
         """Activate the managed device."""
-        logger.info("Manually turning on %s", self._attr_name)
-        device = self.coordinator.get_device_by_unique_id(self.idx) if self.coordinator else None
+        logger.info("Manually turning on %s", self._device.name)
+        device = self.coordinator.get_device_by_unique_id(self._device.unique_id) if self.coordinator else None
         if device is None:
             return
 
@@ -218,8 +230,8 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_off(self, **_kwargs: Any) -> None:
         """Deactivate the managed device."""
-        logger.info("Manually turning off %s", self._attr_name)
-        device = self.coordinator.get_device_by_unique_id(self.idx) if self.coordinator else None
+        logger.info("Manually turning off %s", self._device.name)
+        device = self.coordinator.get_device_by_unique_id(self._device.unique_id) if self.coordinator else None
         if device is None:
             return
 
@@ -233,7 +245,7 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
     def device_info(self) -> DeviceInfo:
         """Return device info for the managed device."""
         return DeviceInfo(
-            entry_type=DeviceEntryType.DEVICE,
+            entry_type=DeviceEntryType.SERVICE,
             identifiers={(const.DOMAIN, self._device.name)},
             name=f"{const.NAME}: {self._device.name}",
             manufacturer=const.AUTHOR,
@@ -241,27 +253,29 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
         )
 
 
-class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
-    """Switch entity to enable or disable a device for PV Excess Manager optimisation."""
+class ManagedDeviceManagedSwitch(SwitchEntity, RestoreEntity):
+    """Enable a device for PV Excess Manager optimisation."""
 
     _attr_icon = "mdi:check"
 
     def __init__(self, hass: HomeAssistant, device: ManagedDevice) -> None:
-        """Initialize the enable switch."""
+        """Initialize the managed switch."""
         self._hass = hass
         self._device = device
+
+        self._attr_name = "Managed"
         self._attr_has_entity_name = True
-        self.entity_id = f"{SWITCH_DOMAIN}.pv_excess_manager_{device.unique_id}_enable"
-        self._attr_name = "Enable"
-        self._attr_unique_id = f"pv_excess_manager_{device.unique_id}_enable"
+        self._attr_unique_id = f"pv_excess_manager_{device.slug}_managed"
+        self.entity_id = f"{SWITCH_DOMAIN}.{self._attr_unique_id}"
+
         self._attr_is_on = True
 
     async def async_added_to_hass(self) -> None:
-        """Restore the last known enabled state."""
+        """Restore the last known managed state."""
         await super().async_added_to_hass()
 
         last_state = await self.async_get_last_state()
-        # Default to True (enabled) on first setup so devices participate in optimisation immediately
+        # Default to True (managed) on first setup so devices participate in optimisation immediately
         self._attr_is_on = last_state.state == STATE_ON if last_state is not None else True
 
         self._apply_to_device()
@@ -279,13 +293,13 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
         self._apply_to_device()
 
     def _apply_to_device(self) -> None:
-        """Propagate the enabled state to the device and notify listeners."""
+        """Propagate the managed state to the device and notify listeners."""
         if not self._device:
             return
 
-        self._device.set_enable(self._attr_is_on)
+        self._device.is_managed = self._attr_is_on
         self._hass.bus.async_fire(
-            event_type=const.EVENT_PV_EXCESS_MANAGER_ENABLE_STATE_CHANGE,
+            event_type=const.EVENT_PV_EXCESS_MANAGER_MANAGED_STATE_CHANGE,
             event_data={"device_unique_id": self._device.unique_id},
         )
 
@@ -293,7 +307,7 @@ class ManagedDeviceEnable(SwitchEntity, RestoreEntity):
     def device_info(self) -> DeviceInfo:
         """Return device info for the managed device."""
         return DeviceInfo(
-            entry_type=DeviceEntryType.DEVICE,
+            entry_type=DeviceEntryType.SERVICE,
             identifiers={(const.DOMAIN, self._device.name)},
             name=f"{const.NAME}: {self._device.name}",
             manufacturer=const.AUTHOR,
