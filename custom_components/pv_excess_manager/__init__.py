@@ -41,7 +41,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     hass.data[DOMAIN]["coordinator"] = coordinator = PVExcessManagerCoordinator(hass, pv_excess_manager_config)
 
-    async def _handle_reload(_):
+    async def _handle_reload(*args, **kwargs):
         await reload_config(hass)
 
     async_register_admin_service(

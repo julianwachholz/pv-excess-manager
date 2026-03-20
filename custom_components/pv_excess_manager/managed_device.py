@@ -38,7 +38,7 @@ POWERED_ENTITY_DOMAINS_NEED_ATTR = (
 )
 
 
-async def enable_entity(hass: HomeAssistant, entity_id: str):
+async def enable_entity(hass: HomeAssistant, entity_id: str, requested_power: float | None = None):
     """Enable an entity by calling the appropriate service based on its domain."""
     domain = entity_id.split(".", maxsplit=1)[0]
     await hass.services.async_call(
@@ -49,7 +49,7 @@ async def enable_entity(hass: HomeAssistant, entity_id: str):
     )
 
 
-async def disable_entity(hass: HomeAssistant, entity_id: str):
+async def disable_entity(hass: HomeAssistant, entity_id: str, requested_power: float | None = None):
     """Disable an entity by calling the appropriate service based on its domain."""
     domain = entity_id.split(".", maxsplit=1)[0]
     await hass.services.async_call(
@@ -60,14 +60,14 @@ async def disable_entity(hass: HomeAssistant, entity_id: str):
     )
 
 
-async def set_entity_value(hass: HomeAssistant, entity_id: str, value: float):
+async def set_entity_value(hass: HomeAssistant, entity_id: str, requested_power: float):
     """Set the value of an entity by calling the appropriate service based on its domain."""
     domain = entity_id.split(".", maxsplit=1)[0]
     if domain in {NUMBER_DOMAIN, INPUT_NUMBER_DOMAIN}:
         await hass.services.async_call(
             domain,
             "set_value",
-            {"entity_id": entity_id, "value": value},
+            {"entity_id": entity_id, "value": requested_power},
             blocking=False,
         )
     else:
@@ -235,70 +235,49 @@ class ManagedDevice:
             "power_divide_factor": self.power_divide_factor,
         }
 
-        if action_type == ACTION_ACTIVATE:
-            if not self.activate_actions:
-                await enable_entity(self.hass, self.entity_id)
-            else:
-                logger.debug("Executing custom activate_actions for %s", self.name)
-                script = Script(
-                    self.hass,
-                    sequence=self.activate_actions,
-                    name=f"Activate: {self.name}",
-                    domain=const.DOMAIN,
-                )
-                await script.async_run(
-                    run_variables=script_variables,
-                    context=action_context,
-                )
+        target_entity = self.entity_id
 
-            self.reset_next_date_available(action_type)
-            if self.can_change_power:
-                self.reset_next_date_available_power()
+        if action_type == ACTION_ACTIVATE:
+            actions = self.activate_actions
+            default_action = enable_entity
 
         elif action_type == ACTION_DEACTIVATE:
-            if not self.deactivate_actions:
-                await disable_entity(self.hass, self.entity_id)
-            else:
-                logger.debug("Executing custom deactivate_actions for %s", self.name)
-                script = Script(
-                    self.hass,
-                    sequence=self.deactivate_actions,
-                    name=f"Deactivate: {self.name}",
-                    domain=const.DOMAIN,
-                )
-                await script.async_run(
-                    run_variables=script_variables,
-                    context=action_context,
-                )
-
-            self.reset_next_date_available(action_type)
+            actions = self.deactivate_actions
+            default_action = disable_entity
 
         elif action_type == ACTION_CHANGE_POWER:
             if not self.can_change_power:
                 msg = f"Device {self.name} cannot change its power!"
                 raise RuntimeError(msg)
 
-            if self.activate_actions:
-                logger.debug("Executing custom activate_actions for %s", self.name)
-                script = Script(
-                    self.hass,
-                    sequence=self.activate_actions,
-                    name=f"Change Power: {self.name}",
-                    domain=const.DOMAIN,
-                )
-                await script.async_run(
-                    run_variables=script_variables,
-                    context=action_context,
-                )
-            elif self.power_entity_id:
-                requested_amps = requested_power / self.power_divide_factor
-                await set_entity_value(self.hass, self.power_entity_id, requested_amps)
-            else:
-                logger.warning(
-                    "Cannot change power on device %s!",
-                    self.name,
-                )
+            actions = self.activate_actions
+            default_action = set_entity_value
 
+            if self.power_entity_id:
+                requested_power = requested_power / self.power_divide_factor
+                target_entity = self.power_entity_id
+            else:
+                msg = f"Device {self.name} cannot change power because no actions and no power_entity_id are defined."
+                raise RuntimeError(msg)
+
+        if actions:
+            logger.debug("Executing custom %s actions for %s", action_type, self.name)
+            script = Script(
+                self.hass,
+                sequence=actions,
+                name=f"{action_type}: {self.name}",
+                domain=const.DOMAIN,
+            )
+            await script.async_run(
+                run_variables=script_variables,
+                context=action_context,
+            )
+        else:
+            await default_action(self.hass, target_entity, requested_power)
+
+        if action_type in {ACTION_ACTIVATE, ACTION_DEACTIVATE}:
+            self.reset_next_date_available(action_type)
+        else:
             self.reset_next_date_available_power()
 
     async def activate(self, requested_power: float):
@@ -319,8 +298,10 @@ class ManagedDevice:
             self.locked_until = now() + self.duration_ontime
         else:
             self.locked_until = now() + self.duration_offtime
-
         logger.debug("Next availability date for %s is %s", self.name, self.locked_until)
+
+        if self.can_change_power:
+            self.reset_next_date_available_power()
 
     def reset_next_date_available_power(self):
         """Set the next availability date to change the variable device's power."""
@@ -395,8 +376,7 @@ class ManagedDevice:
         if self.power_entity_id is not None and self.power_entity_id.startswith(POWERED_ENTITY_DOMAINS_NEED_ATTR):
             msg = (f"Device {self.name} uses variable power but power entity domain isn't supported yet.",)
             raise NotImplementedError(msg)
-        else:
-            power_entity_value = power_entity_state.state
+        power_entity_value = power_entity_state.state
 
         self.current_power = float(power_entity_value) * self.power_divide_factor
         logger.debug(

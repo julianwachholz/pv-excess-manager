@@ -1,7 +1,6 @@
 """Alls constants for the PV Excess Manager integration."""
 
 import voluptuous as vol
-from homeassistant.components.button.const import DOMAIN as BUTTON_DOMAIN
 from homeassistant.components.climate.const import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.components.humidifier.const import DOMAIN as HUMIDIFIER_DOMAIN

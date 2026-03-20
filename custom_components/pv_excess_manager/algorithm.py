@@ -32,7 +32,7 @@ class PVExcessManagerAlgorithm:
         return float(requested)
 
     @classmethod
-    def run_calculation(
+    def run_calculation(  # noqa: PLR0915, PLR0912
         cls,
         devices: list[ManagedDevice],
         grid_consumption: float,

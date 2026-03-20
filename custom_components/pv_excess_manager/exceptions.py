@@ -15,4 +15,4 @@ class UnknownEntity(HomeAssistantError):
 
 
 class InvalidTime(HomeAssistantError):
-    """Error to indicate the give time is invalid"""
+    """Error to indicate the give time is invalid."""

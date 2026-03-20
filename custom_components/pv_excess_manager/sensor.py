@@ -352,7 +352,7 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
 
     @property
     def get_attr_extra_state_attributes(self):
-        """Get the extra state attributes for the entity"""
+        """Get the extra state attributes for the entity."""
         return self._attr_extra_state_attributes
 
     async def service_reset_device_runtime(self):
