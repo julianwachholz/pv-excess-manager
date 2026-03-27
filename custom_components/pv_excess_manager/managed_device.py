@@ -127,7 +127,7 @@ class ManagedDevice:
     _daily_runtime: float = 0
     _min_daily_runtime: float | Template = 0
     _max_daily_runtime: float | Template = 24 * 60
-    offpeak_time: time | None = None
+    _offpeak_time: time | None = None
 
     def __init__(
         self,
@@ -574,3 +574,15 @@ class ManagedDevice:
     @max_daily_runtime.setter
     def max_daily_runtime(self, value: float | Template):
         self._max_daily_runtime = convert_to_template_or_value(self.hass, value) or 0
+
+    @property
+    def offpeak_time(self) -> time | None:
+        """Offpeak time for this device."""
+        return self._offpeak_time
+
+    @offpeak_time.setter
+    def offpeak_time(self, value: str | None):
+        if value is None:
+            self._offpeak_time = None
+        else:
+            self._offpeak_time = datetime.strptime(value, "%H:%M").time()
