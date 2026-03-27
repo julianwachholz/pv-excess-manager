@@ -197,7 +197,7 @@ class PVExcessManagerAlgorithm:
 
             # Check if device is locked and must not be turned off
             if device.is_locked:
-                logger.debug("Device %s is locked, not turning off.", device.name)
+                logger.debug("Device %s is locked, ignoring.", device.name)
                 virtual_excess -= device.current_power
                 total_requested += device.requested_power
                 continue

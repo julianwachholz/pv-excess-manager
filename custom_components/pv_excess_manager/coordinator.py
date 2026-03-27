@@ -103,6 +103,7 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
         for device in self.devices:
             # Initialize current power depending or reality
             device.update_current_power()
+            result[device.unique_id] = device
 
         result["grid_consumption"] = get_power_state(self.hass, self.grid_consumption_entity_id)
         if result["grid_consumption"] is None:
@@ -140,15 +141,14 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
             return result
 
         unique_id, requested_power = target_action
-        result["target_device"] = unique_id
-        result["target_power"] = requested_power
-        result[unique_id] = device
 
         device = self.get_device_by_unique_id(unique_id)
-
         if not device:
-            logger.warning("Device with unique_id %s not found. Action cannot be taken.", unique_id)
+            logger.error("Device with unique_id %s not found. Action cannot be taken.", unique_id)
             return result
+
+        result["target_device"] = unique_id
+        result["target_power"] = requested_power
 
         if requested_power == 0:
             logger.debug("Deactivating %s", device.name)

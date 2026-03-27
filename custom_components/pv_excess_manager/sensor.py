@@ -95,8 +95,6 @@ class PVExcessManagerSensor(CoordinatorEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        logger.debug("Received update from coordinator for key %s", self.key)
-
         if not self.coordinator or not self.coordinator.data:
             logger.warning("Coordinator not set!")
             return
@@ -270,8 +268,6 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
     @callback
     async def on_state_change(self, event: Event) -> None:
         """Listen for entity state changes."""
-        logger.info("Call of on_state_change at %s with event %s", now(), event)
-
         if not event.data:
             return
 
