@@ -209,7 +209,7 @@ class ManagedDevice:
         """Get a slug for this device."""
         return slugify(self.name).replace("-", "_")
 
-    async def _apply_action(self, action_type: str, requested_power: float | None = None):
+    async def _apply_action(self, action_type: str, requested_power: float):
         """
         Apply an action to a managed device.
 
@@ -222,9 +222,6 @@ class ManagedDevice:
             self.name,
             requested_power,
         )
-
-        if requested_power is None:
-            requested_power = self.requested_power
 
         self.requested_power = requested_power
 

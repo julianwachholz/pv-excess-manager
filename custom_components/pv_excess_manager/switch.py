@@ -160,6 +160,9 @@ class ManagedDeviceSwitch(CoordinatorEntity, SwitchEntity):
 
     def _update_custom_attributes(self, device: ManagedDevice) -> None:
         """Populate extra state attributes from the device."""
+        if device.is_active and device.requested_power == 0:
+            device.requested_power = device.power_nominal
+
         extra_attrs = {
             "is_managed": device.is_managed,
             "is_active": device.is_active,
