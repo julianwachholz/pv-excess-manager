@@ -585,4 +585,4 @@ class ManagedDevice:
         if value is None:
             self._offpeak_time = None
         else:
-            self._offpeak_time = datetime.strptime(value, "%H:%M").time()
+            self._offpeak_time = datetime.strptime(value, "%H:%M:%S").time()
