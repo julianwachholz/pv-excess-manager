@@ -96,6 +96,7 @@ class ManagedDevice:
     power_entity_id: str | None
 
     _battery_min_soc: float | Template = 0
+    standby_power: float = 0
 
     current_power: float = 0
     requested_power: float = 0
@@ -170,7 +171,7 @@ class ManagedDevice:
             self.duration_offtime = timedelta(minutes=offtime_minutes)
         self.deactivate_delay = timedelta(minutes=device_config.get(const.CONF_DELAY_DEACTIVATE_MIN) or 0)
 
-        if template := device_config.get(const.CONF_CHECK_AVAILABLE_TEMPLATE):
+        if template := device_config.get(const.CONF_CHECK_USABLE_TEMPLATE):
             self.check_usable_template = Template(template, hass)
 
         self.locked_until = self.power_locked_until = now()
@@ -181,6 +182,7 @@ class ManagedDevice:
         self.change_power_service = str(device_config.get(const.CONF_CHANGE_POWER_SERVICE))
 
         self.battery_min_soc = device_config.get(const.CONF_BATTERY_MIN_SOC) or 0
+        self.standby_power = float(device_config.get(const.CONF_STANDBY_POWER) or 0)
 
         self.min_daily_runtime = device_config.get(const.CONF_MIN_DAILY_RUNTIME) or 0
         self.max_daily_runtime = device_config.get(const.CONF_MAX_DAILY_RUNTIME) or 24 * 60

@@ -65,8 +65,8 @@ CONF_NOMINAL_POWER = "nominal_power"
 # Actual power consumption sensor
 CONF_POWER_SENSOR_ENTITY_ID = "power_sensor_entity_id"
 
-# Logic to check if the device is available
-CONF_CHECK_AVAILABLE_TEMPLATE = "check_available_template"
+# Logic to check if the device is usable
+CONF_CHECK_USABLE_TEMPLATE = "check_usable_template"
 
 # Minimum duration a device must remain in its on or off state once switched
 CONF_ONTIME_DURATION_MIN = "ontime_duration_min"
@@ -90,6 +90,9 @@ DEFAULT_CHANGE_POWER_SERVICE = "number.set_value"
 
 # Battery must have at least this SOC to allow use of this device
 CONF_BATTERY_MIN_SOC = "battery_min_soc"
+
+# If the device is ON and its measured power drops below this threshold, deactivate it immediately
+CONF_STANDBY_POWER = "standby_power"
 
 # Delay thresholds to enable or disable a device
 CONF_DELAY_ACTIVATE_MIN = "delay_activate_min"

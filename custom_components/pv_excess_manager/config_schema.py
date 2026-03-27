@@ -168,7 +168,7 @@ basic_device_schema = vol.Schema(
             ),
         ),
         vol.Optional(
-            const.CONF_CHECK_AVAILABLE_TEMPLATE,
+            const.CONF_CHECK_USABLE_TEMPLATE,
         ): selector.TemplateSelector(),
         vol.Optional(const.CONF_DELAY_ACTIVATE_MIN): selector.NumberSelector(
             selector.NumberSelectorConfig(
@@ -218,6 +218,14 @@ basic_device_schema = vol.Schema(
                 step=1,
                 mode=selector.NumberSelectorMode.SLIDER,
                 unit_of_measurement="%",
+            ),
+        ),
+        vol.Optional(const.CONF_STANDBY_POWER): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="W",
             ),
         ),
         vol.Optional(const.CONF_MIN_DAILY_RUNTIME): selector.NumberSelector(
@@ -322,7 +330,7 @@ variable_device_schema = vol.Schema(
             )
         ),
         vol.Optional(
-            const.CONF_CHECK_AVAILABLE_TEMPLATE,
+            const.CONF_CHECK_USABLE_TEMPLATE,
         ): selector.TemplateSelector(),
         vol.Optional(const.CONF_DELAY_ACTIVATE_MIN): selector.NumberSelector(
             selector.NumberSelectorConfig(
@@ -382,6 +390,14 @@ variable_device_schema = vol.Schema(
                 step=1,
                 mode=selector.NumberSelectorMode.SLIDER,
                 unit_of_measurement="%",
+            ),
+        ),
+        vol.Optional(const.CONF_STANDBY_POWER): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="W",
             ),
         ),
         vol.Optional(const.CONF_MIN_DAILY_RUNTIME): selector.NumberSelector(

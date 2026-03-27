@@ -208,6 +208,17 @@ class PVExcessManagerAlgorithm:
                 target_action = (device.unique_id, 0)
                 break
 
+            # Check if device has dropped to standby — its internal logic decided no work is needed
+            if device.standby_power and device.current_power < device.standby_power:
+                logger.info(
+                    "Device %s is in standby (current_power=%s < standby_power=%s). Deactivating.",
+                    device.name,
+                    device.current_power,
+                    device.standby_power,
+                )
+                target_action = (device.unique_id, 0)
+                break
+
             if device.should_be_forced_offpeak():
                 logger.debug(
                     "Device %s is forced offpeak. Keeping it ON regardless of PV surplus.",
