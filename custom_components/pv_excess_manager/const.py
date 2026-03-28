@@ -84,9 +84,7 @@ CONF_POWER_STEP = "power_step"
 DEFAULT_POWER_STEP = 230
 
 CONF_DURATION_POWER_MIN = "duration_power_min"
-CONF_CHANGE_POWER_SERVICE = "change_power_service"
 CONF_POWER_DIVIDE_FACTOR = "power_divide_factor"
-DEFAULT_CHANGE_POWER_SERVICE = "number.set_value"
 
 # Battery must have at least this SOC to allow use of this device
 CONF_BATTERY_MIN_SOC = "battery_min_soc"

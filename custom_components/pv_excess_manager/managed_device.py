@@ -10,6 +10,7 @@ from homeassistant.components.light.const import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Context
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.script import Script
 from homeassistant.helpers.template import Template
 from homeassistant.util.dt import now
@@ -84,16 +85,16 @@ class ManagedDevice:
     coordinator: PVExcessManagerCoordinator
 
     name: str
-    entity_id: str | None
+    entity_id: str
     unique_id: str
 
     power_nominal: float
-    power_sensor_entity_id: str | None
+    power_sensor_entity_id: str | None = None
 
     _power_max: float | Template = 0
     _power_step: float | Template = 0
     power_divide_factor: float = 1
-    power_entity_id: str | None
+    power_entity_id: str | None = None
 
     _battery_min_soc: float | Template = 0
     standby_power: float = 0
@@ -116,19 +117,18 @@ class ManagedDevice:
     priority: int = const.DEFAULT_PRIORITY
 
     # Device must not be changed before this time stamp
-    locked_until: datetime
-    power_locked_until: datetime
+    locked_until: datetime = None
+    power_locked_until: datetime = None
 
-    activate_actions: list
-    deactivate_actions: list
-    change_power_service: str
+    activate_actions: list = None
+    deactivate_actions: list = None
 
     battery_soc: float = 0
 
     _daily_runtime: float = 0
     _min_daily_runtime: float | Template = 0
     _max_daily_runtime: float | Template = 24 * 60
-    _offpeak_time: time | None = None
+    offpeak_time: time | None = None
 
     def __init__(
         self,
@@ -140,55 +140,61 @@ class ManagedDevice:
         self.hass = hass
         self.coordinator = coordinator
 
-        self.name = str(device_config.get(const.CONF_NAME))
-        self.unique_id = str(device_config.get(const.CONF_UNIQUE_ID))
-        self.entity_id = device_config.get(const.CONF_ENTITY_ID)
+        self.name = cv.string(device_config.get(const.CONF_NAME))
+        self.unique_id = cv.string(device_config.get(const.CONF_UNIQUE_ID))
+        self.entity_id = cv.entity_id_or_uuid(device_config.get(const.CONF_ENTITY_ID))
 
-        self.power_nominal = float(device_config.get(const.CONF_NOMINAL_POWER) or 0)
+        self.power_nominal = cv.positive_float(device_config.get(const.CONF_NOMINAL_POWER) or 0)
         if self.power_nominal <= 0:
             msg = f"Device {self.name} nominal power ({self.power_nominal!r}) must be > 0."
             raise ConfigurationError(msg)
-        self.power_sensor_entity_id = device_config.get(const.CONF_POWER_SENSOR_ENTITY_ID)
+
+        if power_sensor_entity_id := device_config.get(const.CONF_POWER_SENSOR_ENTITY_ID):
+            self.power_sensor_entity_id = cv.entity_id_or_uuid(power_sensor_entity_id)
 
         # Attributes for variable power devices
-        self.power_max = device_config.get(const.CONF_POWER_MAX) or 0
-        self.power_step = device_config.get(const.CONF_POWER_STEP) or 0
-        self.power_divide_factor = device_config.get(const.CONF_POWER_DIVIDE_FACTOR) or 1
-        self.power_entity_id = device_config.get(const.CONF_POWER_ENTITY_ID)
+        self.power_max = cv.positive_float(device_config.get(const.CONF_POWER_MAX) or 0)
+        self.power_step = cv.positive_float(device_config.get(const.CONF_POWER_STEP) or 0)
+        self.power_divide_factor = cv.positive_float(device_config.get(const.CONF_POWER_DIVIDE_FACTOR) or 1)
+        if power_entity_id := device_config.get(const.CONF_POWER_ENTITY_ID):
+            self.power_entity_id = cv.entity_id_or_uuid(power_entity_id)
 
         # Duration control
         duration = timedelta(minutes=device_config.get(const.CONF_ONTIME_DURATION_MIN) or 1)
-        self.duration_ontime = duration
-        self.activate_delay = timedelta(minutes=device_config.get(const.CONF_DELAY_ACTIVATE_MIN) or 0)
+        self.duration_ontime = cv.positive_timedelta(duration)
+        self.activate_delay = cv.positive_timedelta(
+            timedelta(minutes=device_config.get(const.CONF_DELAY_ACTIVATE_MIN) or 0)
+        )
 
-        self.duration_power = duration
+        self.duration_power = cv.positive_timedelta(duration)
         power_minutes = device_config.get(const.CONF_DURATION_POWER_MIN)
         if power_minutes is not None:
-            self.duration_power = timedelta(minutes=power_minutes)
+            self.duration_power = cv.positive_timedelta(timedelta(minutes=power_minutes))
 
-        self.duration_offtime = duration
+        self.duration_offtime = cv.positive_timedelta(duration)
         if offtime_minutes := device_config.get(const.CONF_OFFTIME_DURATION_MIN):
-            self.duration_offtime = timedelta(minutes=offtime_minutes)
-        self.deactivate_delay = timedelta(minutes=device_config.get(const.CONF_DELAY_DEACTIVATE_MIN) or 0)
+            self.duration_offtime = cv.positive_timedelta(timedelta(minutes=offtime_minutes))
+        self.deactivate_delay = cv.positive_timedelta(
+            timedelta(minutes=device_config.get(const.CONF_DELAY_DEACTIVATE_MIN) or 0)
+        )
 
         if template := device_config.get(const.CONF_CHECK_USABLE_TEMPLATE):
             self.check_usable_template = Template(template, hass)
 
         self.locked_until = self.power_locked_until = now()
 
-        self.activate_actions = device_config.get(const.CONF_ACTIVATE_ACTIONS)
-        self.deactivate_actions = device_config.get(const.CONF_DEACTIVATE_ACTIONS)
+        self.activate_actions = cv.SCRIPT_SCHEMA(device_config.get(const.CONF_ACTIVATE_ACTIONS))
+        self.deactivate_actions = cv.SCRIPT_SCHEMA(device_config.get(const.CONF_DEACTIVATE_ACTIONS))
 
-        self.change_power_service = str(device_config.get(const.CONF_CHANGE_POWER_SERVICE))
+        self.battery_min_soc = cv.positive_int(device_config.get(const.CONF_BATTERY_MIN_SOC) or 0)
+        self.standby_power = cv.positive_float(device_config.get(const.CONF_STANDBY_POWER) or 0)
 
-        self.battery_min_soc = device_config.get(const.CONF_BATTERY_MIN_SOC) or 0
-        self.standby_power = float(device_config.get(const.CONF_STANDBY_POWER) or 0)
+        self.min_daily_runtime = cv.positive_int(device_config.get(const.CONF_MIN_DAILY_RUNTIME) or 0)
+        self.max_daily_runtime = cv.positive_int(device_config.get(const.CONF_MAX_DAILY_RUNTIME) or 24 * 60)
+        if offpeak_time := device_config.get(const.CONF_OFFPEAK_TIME):
+            self.offpeak_time = cv.time(offpeak_time)
 
-        self.min_daily_runtime = device_config.get(const.CONF_MIN_DAILY_RUNTIME) or 0
-        self.max_daily_runtime = device_config.get(const.CONF_MAX_DAILY_RUNTIME) or 24 * 60
-        self.offpeak_time = device_config.get(const.CONF_OFFPEAK_TIME)
-
-        self.priority = int(device_config.get(const.CONF_PRIORITY) or const.DEFAULT_PRIORITY)
+        self.priority = cv.positive_int(device_config.get(const.CONF_PRIORITY) or const.DEFAULT_PRIORITY)
 
         if self.is_active:
             self.requested_power = self.power_nominal
@@ -229,7 +235,7 @@ class ManagedDevice:
 
         action_context = Context()
         script_variables = {
-            "requested_power": requested_power,
+            "requested_power": requested_power / self.power_divide_factor,
             "current_power": self.current_power,
             "power_divide_factor": self.power_divide_factor,
         }
@@ -255,7 +261,7 @@ class ManagedDevice:
             if self.power_entity_id:
                 requested_power = requested_power / self.power_divide_factor
                 target_entity = self.power_entity_id
-            else:
+            elif not actions:
                 msg = f"Device {self.name} cannot change power because no actions and no power_entity_id are defined."
                 raise RuntimeError(msg)
 
@@ -266,6 +272,7 @@ class ManagedDevice:
                 sequence=actions,
                 name=f"{action_type}: {self.name}",
                 domain=const.DOMAIN,
+                # variables=script_variables,
             )
             await script.async_run(
                 run_variables=script_variables,
@@ -573,15 +580,3 @@ class ManagedDevice:
     @max_daily_runtime.setter
     def max_daily_runtime(self, value: float | Template):
         self._max_daily_runtime = convert_to_template_or_value(self.hass, value) or 0
-
-    @property
-    def offpeak_time(self) -> time | None:
-        """Offpeak time for this device."""
-        return self._offpeak_time
-
-    @offpeak_time.setter
-    def offpeak_time(self, value: str | None):
-        if value is None:
-            self._offpeak_time = None
-        else:
-            self._offpeak_time = datetime.strptime(value, "%H:%M:%S").time()
