@@ -243,6 +243,7 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
                     UnitOfTime.SECONDS,
                 )
                 self._attr_native_value = value
+                self._device.daily_runtime = self._attr_native_value
                 logger.info(
                     "%s - loaded runtime from storage is %s",
                     self._device.name,
