@@ -467,6 +467,14 @@ class ManagedDevice:
         if not self.check_usable(check_battery=False) or self.offpeak_time is None:
             return False
 
+        logger.debug(
+            "Checking if %s should be forced offpeak. daily_runtime=%s, min_daily_runtime=%s, max_daily_runtime=%s",
+            self.name,
+            self.daily_runtime,
+            self.min_daily_runtime,
+            self.max_daily_runtime,
+        )
+
         if self.daily_runtime >= self.max_daily_runtime or self.daily_runtime > self.min_daily_runtime:
             # Maximum exceeded or minimum already reached, do not force offpeak
             return False
