@@ -245,8 +245,15 @@ class PVExcessManagerAlgorithm:
 
             is_surplus_insufficient = False
 
+            # For variable power devices, account for the gap between the previously requested
+            # power and the actual current consumption. When a device hasn't reached its commanded
+            # level yet (e.g., due to ramp-up or hardware limits), the actual consumption
+            # understates the effective virtual excess, which could cause premature deactivation
+            # instead of a reduction to the appropriate lower power step.
+            effective_virtual_excess = virtual_excess + max(0.0, device.requested_power - device.current_power)
+
             if device.can_change_power:
-                potential_power = cls._get_variable_power(virtual_excess, device)
+                potential_power = cls._get_variable_power(effective_virtual_excess, device)
                 is_surplus_insufficient = potential_power == 0
             else:
                 is_surplus_insufficient = virtual_excess < device.current_power
@@ -272,8 +279,12 @@ class PVExcessManagerAlgorithm:
             device.reset_deactivate_delay()
 
             if device.can_change_power:
-                requested_power = cls._get_variable_power(virtual_excess, device)
-                is_power_in_range = abs(device.current_power - requested_power) <= device.power_step / 2
+                requested_power = cls._get_variable_power(effective_virtual_excess, device)
+                # Compare against device.requested_power (the previously sent command) rather
+                # than device.current_power (actual measurement). This ensures a reduction is
+                # triggered when the device hasn't reached its commanded level yet, even if the
+                # actual consumption happens to be close to the new target.
+                is_power_in_range = abs(device.requested_power - requested_power) <= device.power_step / 2
                 logger.debug(
                     "Device %s can change power. Requested: %s, virtual_excess: %s, is_power_in_range: %s",
                     device.name,
