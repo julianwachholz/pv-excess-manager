@@ -266,6 +266,19 @@ class PVExcessManagerAlgorithm:
                     virtual_excess,
                 )
 
+                # For variable power devices above minimum, step down to minimum power first
+                # before starting the deactivation timer. This avoids jumping straight from a
+                # high power level to off when only the minimum power is no longer supportable.
+                if device.can_change_power and device.requested_power > device.power_nominal:
+                    logger.debug(
+                        "Device %s stepping down to minimum power %s W before deactivation.",
+                        device.name,
+                        device.power_nominal,
+                    )
+                    target_action = (device.unique_id, device.power_nominal)
+                    total_requested += device.power_nominal
+                    break
+
                 if device.is_deactivate_delay_passed():
                     target_action = (device.unique_id, 0)
                     device.reset_deactivate_delay()
