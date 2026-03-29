@@ -123,8 +123,12 @@ class PVExcessManagerAlgorithm:
                 if device.should_be_forced_offpeak():
                     requested_power = device.power_nominal
                     if device.can_change_power:
-                        # Try to get more if PV is high, otherwise guarantee at least nominal
-                        requested_power = max(device.power_nominal, cls._get_variable_power(virtual_excess, device))
+                        # Try to get more if PV is high, otherwise guarantee at least nominal.
+                        # Account for power already consumed by the device (e.g. via power sensor while inactive).
+                        requested_power = max(
+                            device.power_nominal,
+                            cls._get_variable_power(virtual_excess + device.current_power, device),
+                        )
 
                     logger.debug(
                         "Device %s is forced offpeak. Activating immediately, bypassing PV checks.",
@@ -136,7 +140,8 @@ class PVExcessManagerAlgorithm:
                     break
 
                 if device.can_change_power:
-                    requested_power = cls._get_variable_power(virtual_excess, device)
+                    # Account for power already consumed by the device (e.g. via power sensor while inactive)
+                    requested_power = cls._get_variable_power(virtual_excess + device.current_power, device)
                     if requested_power == 0:
                         device.reset_activate_delay()
                         continue
@@ -159,12 +164,15 @@ class PVExcessManagerAlgorithm:
                         requested_power,
                         virtual_excess,
                     )
-                    # Reserve the requested power during activation delay
-                    virtual_excess -= requested_power
+                    # Reserve only the additional power needed during activation delay
+                    virtual_excess -= max(0.0, requested_power - device.current_power)
                     continue
 
-                # Check device's nominal power to check if we can turn it on
-                if virtual_excess >= device.power_nominal:
+                # Check device's nominal power to check if we can turn it on.
+                # Deduct the device's current consumption (e.g. via power sensor while inactive)
+                # so only the additional power required is compared against the available excess.
+                additional_power_needed = max(0.0, device.power_nominal - device.current_power)
+                if virtual_excess >= additional_power_needed:
                     # Virtual excess is available, check activation delay
                     logger.debug(
                         "Device %s should be turned on with nominal power. Requested: %s, virtual_excess: %s",
@@ -184,8 +192,8 @@ class PVExcessManagerAlgorithm:
                         device.power_nominal,
                         virtual_excess,
                     )
-                    # Reserve the nominal power during activation delay
-                    virtual_excess -= device.power_nominal
+                    # Reserve only the additional power needed during activation delay
+                    virtual_excess -= additional_power_needed
                 else:
                     device.reset_activate_delay()
 
