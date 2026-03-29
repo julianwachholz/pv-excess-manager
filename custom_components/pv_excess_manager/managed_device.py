@@ -8,6 +8,7 @@ from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
 from homeassistant.components.light.const import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
+from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Context
 from homeassistant.helpers import config_validation as cv
@@ -78,6 +79,16 @@ async def set_entity_value(hass: HomeAssistant, entity_id: str, requested_power:
         )
 
 
+async def hass_select_option(hass: HomeAssistant, entity_id: str, option: str):
+    """Select an option on a select entity."""
+    await hass.services.async_call(
+        SELECT_DOMAIN,
+        "select_option",
+        {"entity_id": entity_id, "option": option},
+        blocking=False,
+    )
+
+
 class ManagedDevice:
     """A Managed device representation."""
 
@@ -123,6 +134,9 @@ class ManagedDevice:
     activate_actions: list = None
     deactivate_actions: list = None
 
+    select_option_on: str | None = None
+    select_option_off: str | None = None
+
     battery_soc: float = 0
 
     _daily_runtime: float = 0
@@ -130,7 +144,7 @@ class ManagedDevice:
     _max_daily_runtime: float | Template = 24 * 60
     offpeak_time: time | None = None
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         hass: HomeAssistant,
         device_config: dict,
@@ -186,6 +200,11 @@ class ManagedDevice:
         self.activate_actions = cv.SCRIPT_SCHEMA(device_config.get(const.CONF_ACTIVATE_ACTIONS))
         self.deactivate_actions = cv.SCRIPT_SCHEMA(device_config.get(const.CONF_DEACTIVATE_ACTIONS))
 
+        if select_option_on := device_config.get(const.CONF_SELECT_OPTION_ON):
+            self.select_option_on = str(select_option_on)
+        if select_option_off := device_config.get(const.CONF_SELECT_OPTION_OFF):
+            self.select_option_off = str(select_option_off)
+
         self.battery_min_soc = cv.positive_int(device_config.get(const.CONF_BATTERY_MIN_SOC) or 0)
         self.standby_power = cv.positive_float(device_config.get(const.CONF_STANDBY_POWER) or 0)
 
@@ -217,7 +236,7 @@ class ManagedDevice:
         """Get a slug for this device."""
         return slugify(self.name).replace("-", "_")
 
-    async def _apply_action(self, action_type: str, requested_power: float):
+    async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912
         """
         Apply an action to a managed device.
 
@@ -278,6 +297,25 @@ class ManagedDevice:
                 run_variables=script_variables,
                 context=action_context,
             )
+        elif (
+            target_entity
+            and target_entity.split(".", maxsplit=1)[0] == SELECT_DOMAIN
+            and action_type in {ACTION_ACTIVATE, ACTION_DEACTIVATE}
+        ):
+            if action_type == ACTION_ACTIVATE:
+                option = self.select_option_on
+                option_conf_key = const.CONF_SELECT_OPTION_ON
+            else:
+                option = self.select_option_off
+                option_conf_key = const.CONF_SELECT_OPTION_OFF
+            if option is None:
+                logger.warning(
+                    "Device %s uses a select entity but %s is not configured.",
+                    self.name,
+                    option_conf_key,
+                )
+            else:
+                await hass_select_option(self.hass, target_entity, option)
         else:
             await default_action(self.hass, target_entity, requested_power)
 
@@ -407,7 +445,12 @@ class ManagedDevice:
 
         if self.entity_id:
             device_state = self.hass.states.get(self.entity_id)
-            device_active = device_state and device_state.state == STATE_ON
+            if device_state:
+                domain = self.entity_id.split(".", maxsplit=1)[0]
+                if domain == SELECT_DOMAIN and self.select_option_on is not None:
+                    device_active = device_state.state == self.select_option_on
+                else:
+                    device_active = device_state.state == STATE_ON
 
         return device_active
 

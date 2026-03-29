@@ -150,6 +150,8 @@ basic_device_schema = vol.Schema(
                 unit_of_measurement="W",
             ),
         ),
+        vol.Optional(const.CONF_SELECT_OPTION_ON): selector.TextSelector(),
+        vol.Optional(const.CONF_SELECT_OPTION_OFF): selector.TextSelector(),
         vol.Optional(const.CONF_POWER_SENSOR_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 filter=[
@@ -274,6 +276,8 @@ variable_device_schema = vol.Schema(
                 unit_of_measurement="W",
             ),
         ),
+        vol.Optional(const.CONF_SELECT_OPTION_ON): selector.TextSelector(),
+        vol.Optional(const.CONF_SELECT_OPTION_OFF): selector.TextSelector(),
         vol.Optional(const.CONF_POWER_SENSOR_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 filter=[

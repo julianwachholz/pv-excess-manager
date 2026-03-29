@@ -77,6 +77,10 @@ DEFAULT_ONTIME_DURATION_MIN = 30
 CONF_ACTIVATE_ACTIONS = "activate_actions"
 CONF_DEACTIVATE_ACTIONS = "deactivate_actions"
 
+# Select entity option values for ON and OFF states
+CONF_SELECT_OPTION_ON = "select_option_on"
+CONF_SELECT_OPTION_OFF = "select_option_off"
+
 # Variable power settings
 CONF_POWER_ENTITY_ID = "power_entity_id"
 CONF_POWER_MAX = "power_max"
