@@ -203,21 +203,27 @@ class PVExcessManagerAlgorithm:
             #  DEVICE IS CURRENTLY ON
             # ########################
 
-            # Check if device is locked and must not be turned off
+            # Check if device is locked and must not be turned off.
+            # For variable devices that are not power-locked, allow power adjustments
+            # while still preventing deactivation. The on-duration lock should only
+            # prevent full deactivation/activation, not power level changes.
             if device.is_locked:
-                logger.debug("Device %s is locked, ignoring.", device.name)
-                virtual_excess -= device.current_power
-                total_requested += device.requested_power
-                continue
+                if not (device.can_change_power and not device.is_power_locked):
+                    logger.debug("Device %s is locked, ignoring.", device.name)
+                    virtual_excess -= device.current_power
+                    total_requested += device.requested_power
+                    continue
+                logger.debug("Device %s is locked but can change power. Evaluating power adjustment.", device.name)
 
-            # Check if device must be forced off immediately
-            if not device.check_usable(check_battery=False):
+            # Check if device must be forced off immediately (skip for locked devices)
+            if not device.is_locked and not device.check_usable(check_battery=False):
                 logger.debug("Device %s is no longer usable. Turning off immediately.", device.name)
                 target_action = (device.unique_id, 0)
                 break
 
             # Check if device has dropped to standby — its internal logic decided no work is needed
-            if device.standby_power and device.current_power < device.standby_power:
+            # Locked devices are not deactivated due to standby; the on-duration lock takes precedence.
+            if not device.is_locked and device.standby_power and device.current_power < device.standby_power:
                 logger.info(
                     "Device %s is in standby (current_power=%s < standby_power=%s). Deactivating.",
                     device.name,
@@ -287,12 +293,17 @@ class PVExcessManagerAlgorithm:
                     total_requested += device.power_nominal
                     break
 
-                if device.is_deactivate_delay_passed():
+                # Locked devices must not be deactivated; the on-duration takes precedence.
+                if not device.is_locked and device.is_deactivate_delay_passed():
                     target_action = (device.unique_id, 0)
                     device.reset_deactivate_delay()
                     break
 
-                logger.debug("Device %s pending deactivation. Reserving %s W.", device.name, device.current_power)
+                logger.debug(
+                    "Device %s pending deactivation or locked. Reserving %s W.",
+                    device.name,
+                    device.current_power,
+                )
                 virtual_excess -= device.current_power
                 continue
 
