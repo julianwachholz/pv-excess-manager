@@ -356,4 +356,3 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
         """Listen for service calls to reset the runtime counter."""
         logger.info("%s - Calling service_reset_device_runtime", self)
         await self.on_midnight()
-        await self.on_midnight()
