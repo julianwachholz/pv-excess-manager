@@ -86,7 +86,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         if entry.data.get(CONF_DEVICE_TYPE) == CONF_DEVICE_MAIN:
-            PVExcessManagerCoordinator.reset()
+            await PVExcessManagerCoordinator.async_reset()
         else:
             coordinator = PVExcessManagerCoordinator.get_coordinator()
             if coordinator is not None:
@@ -106,6 +106,7 @@ async def reload_config(hass: HomeAssistant):
     """Handle reload service call."""
     logger.info("Service %s.reload called: reloading integration", DOMAIN)
     await async_setup_component(hass, DOMAIN, None)
-    await async_setup_component(hass, DOMAIN, None)
-    await async_setup_component(hass, DOMAIN, None)
-    await async_setup_component(hass, DOMAIN, None)
+
+    entries = hass.config_entries.async_entries(DOMAIN)
+    for entry in entries:
+        await hass.config_entries.async_reload(entry.entry_id)
