@@ -189,7 +189,7 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
         return PVExcessManagerCoordinator.hass.data[const.DOMAIN]["coordinator"]
 
     @classmethod
-    async def async_reset(cls) -> Any:
+    def reset(cls) -> Any:
         """Reset the coordinator from the hass.data."""
         if (
             not hasattr(PVExcessManagerCoordinator, "hass")
