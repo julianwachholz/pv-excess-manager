@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.const import SERVICE_RELOAD
-from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady, HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.service import async_register_admin_service
@@ -109,5 +109,5 @@ async def reload_config(hass: HomeAssistant):
     for entry in entries:
         try:
             await hass.config_entries.async_reload(entry.entry_id)
-        except ConfigEntryError, ConfigEntryNotReady, HomeAssistantError:
+        except HomeAssistantError:
             logger.exception("Could not reload config entry %s", entry.entry_id)
