@@ -110,4 +110,4 @@ async def reload_config(hass: HomeAssistant):
         try:
             await hass.config_entries.async_reload(entry.entry_id)
         except HomeAssistantError:
-            logger.exception("Could not reload config entry %s", entry.entry_id)
+            logger.exception("Failed to reload config entry %s", entry.entry_id)
