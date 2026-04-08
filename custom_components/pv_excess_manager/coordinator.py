@@ -94,7 +94,7 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
             unsubscribe_refresh()
             self._unsub_refresh = None
 
-    async def async_shutdown(self) -> None:
+    def shutdown(self) -> None:
         """Stop subscriptions and periodic refresh callbacks."""
         self.maybe_unsubscribe_events()
         self._cancel_refresh_timer()
@@ -199,7 +199,7 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
             return
 
         if coordinator := PVExcessManagerCoordinator.hass.data[const.DOMAIN].get("coordinator"):
-            await coordinator.async_shutdown()
+            coordinator.shutdown()
         PVExcessManagerCoordinator.hass.data[const.DOMAIN]["coordinator"] = None
 
     @property
