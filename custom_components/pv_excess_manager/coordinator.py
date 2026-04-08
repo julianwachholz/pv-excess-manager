@@ -81,22 +81,21 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
         self.update_interval = timedelta(seconds=refresh_period)
         self._schedule_refresh()
 
-    def maybe_unsubscribe_events(self):
+    def _maybe_unsubscribe_events(self):
         """Unsubscribe from events if we are currently subscribed."""
-        if self._unsubscribe_events is not None:
-            self._unsubscribe_events()
+        if unsubscribe_events := getattr(self, "_unsubscribe_events", None):
+            unsubscribe_events()
             self._unsubscribe_events = None
 
     def _cancel_refresh_timer(self) -> None:
         """Cancel the scheduled coordinator refresh callback if present."""
-        unsubscribe_refresh = getattr(self, "_unsub_refresh", None)
-        if unsubscribe_refresh is not None:
+        if unsubscribe_refresh := getattr(self, "_unsub_refresh", None):
             unsubscribe_refresh()
             self._unsub_refresh = None
 
     def shutdown(self) -> None:
         """Stop subscriptions and periodic refresh callbacks."""
-        self.maybe_unsubscribe_events()
+        self._maybe_unsubscribe_events()
         self._cancel_refresh_timer()
 
     async def on_ha_started(self, _) -> None:

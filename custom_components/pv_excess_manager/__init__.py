@@ -106,8 +106,14 @@ async def reload_config(hass: HomeAssistant):
     """Handle reload service call."""
     logger.info("Service %s.reload called: reloading integration", DOMAIN)
     entries = hass.config_entries.async_entries(DOMAIN)
+    failed_entries: list[str] = []
     for entry in entries:
         try:
             await hass.config_entries.async_reload(entry.entry_id)
         except HomeAssistantError:
             logger.exception("Failed to reload config entry %s", entry.entry_id)
+            failed_entries.append(entry.entry_id)
+
+    if failed_entries:
+        msg = f"Failed to reload config entries: {', '.join(failed_entries)}"
+        raise HomeAssistantError(msg)
