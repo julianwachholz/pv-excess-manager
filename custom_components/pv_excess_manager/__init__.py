@@ -5,7 +5,6 @@ from homeassistant.const import SERVICE_RELOAD
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.setup import async_setup_component
 
 from .const import CONF_DEVICE_MAIN, CONF_DEVICE_TYPE, CONF_UNIQUE_ID, DOMAIN, PLATFORMS
 from .coordinator import PVExcessManagerCoordinator
@@ -105,8 +104,6 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry):
 async def reload_config(hass: HomeAssistant):
     """Handle reload service call."""
     logger.info("Service %s.reload called: reloading integration", DOMAIN)
-    await async_setup_component(hass, DOMAIN, None)
-
     entries = hass.config_entries.async_entries(DOMAIN)
     for entry in entries:
         await hass.config_entries.async_reload(entry.entry_id)
