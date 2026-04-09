@@ -76,15 +76,27 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
 
         self._main_config_done = True
 
+        self._cancel_refresh_timer()
         refresh_period = config.data.get(const.CONF_REFRESH_PERIOD_SEC) or const.DEFAULT_REFRESH_PERIOD_SEC
         self.update_interval = timedelta(seconds=refresh_period)
         self._schedule_refresh()
 
-    def maybe_unsubscribe_events(self):
+    def _maybe_unsubscribe_events(self):
         """Unsubscribe from events if we are currently subscribed."""
-        if self._unsubscribe_events is not None:
-            self._unsubscribe_events()
+        if unsubscribe_events := getattr(self, "_unsubscribe_events", None):
+            unsubscribe_events()
             self._unsubscribe_events = None
+
+    def _cancel_refresh_timer(self) -> None:
+        """Cancel the scheduled coordinator refresh callback if present."""
+        if unsubscribe_refresh := getattr(self, "_unsub_refresh", None):
+            unsubscribe_refresh()
+            self._unsub_refresh = None
+
+    def shutdown(self) -> None:
+        """Stop subscriptions and periodic refresh callbacks."""
+        self._maybe_unsubscribe_events()
+        self._cancel_refresh_timer()
 
     async def on_ha_started(self, _) -> None:
         """Listen the homeassistant_started event to initialize the first calculation."""
@@ -186,7 +198,7 @@ class PVExcessManagerCoordinator(DataUpdateCoordinator):
             return
 
         if coordinator := PVExcessManagerCoordinator.hass.data[const.DOMAIN].get("coordinator"):
-            coordinator.maybe_unsubscribe_events()
+            coordinator.shutdown()
         PVExcessManagerCoordinator.hass.data[const.DOMAIN]["coordinator"] = None
 
     @property
