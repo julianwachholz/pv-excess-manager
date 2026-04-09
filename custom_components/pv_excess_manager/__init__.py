@@ -86,7 +86,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         if entry.data.get(CONF_DEVICE_TYPE) == CONF_DEVICE_MAIN:
-            PVExcessManagerCoordinator.reset()
+            coordinator = PVExcessManagerCoordinator.get_coordinator()
+            if coordinator is not None:
+                coordinator.shutdown()
         else:
             coordinator = PVExcessManagerCoordinator.get_coordinator()
             if coordinator is not None:
