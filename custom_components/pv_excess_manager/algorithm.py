@@ -69,12 +69,19 @@ class PVExcessManagerAlgorithm:
             battery_soc,
         )
 
-        # TODO: power_production, battery_consumption aren't used in the algo yet
+        # TODO: power_production isn't used in the algo yet
 
         current_import = max(0.0, grid_consumption)
         current_export = max(0.0, -grid_consumption)
-
         virtual_excess = current_export - current_import
+
+        if battery_consumption is not None:
+            virtual_excess -= battery_consumption
+
+        logger.debug(
+            "Virtual excess before checking devices: %s",
+            virtual_excess,
+        )
 
         # Build list of currently managed devices
         managed_devices = []

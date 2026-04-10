@@ -166,11 +166,11 @@ class ManagedDevice:
             timedelta(minutes=device_config.get(const.CONF_DELAY_ACTIVATE_MIN) or 0)
         )
 
-        self.duration_power = cv.positive_timedelta(duration)
+        self.duration_power = timedelta(0)
         if power_minutes := device_config.get(const.CONF_DURATION_POWER_MIN):
             self.duration_power = cv.positive_timedelta(timedelta(minutes=power_minutes))
 
-        self.duration_offtime = cv.positive_timedelta(duration)
+        self.duration_offtime = timedelta(0)
         if offtime_minutes := device_config.get(const.CONF_OFFTIME_DURATION_MIN):
             self.duration_offtime = cv.positive_timedelta(timedelta(minutes=offtime_minutes))
         self.deactivate_delay = cv.positive_timedelta(
@@ -278,6 +278,8 @@ class ManagedDevice:
                 context=action_context,
             )
         else:
+            if self.can_change_power:
+                await set_entity_value(self.hass, target_entity, requested_power)
             await default_action(self.hass, target_entity, requested_power)
 
         if action_type in {ACTION_ACTIVATE, ACTION_DEACTIVATE}:

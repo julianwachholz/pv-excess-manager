@@ -86,11 +86,11 @@ Configure once per Home Assistant instance. These settings control the grid moni
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | **Refresh period** | Number (s) | 30 | How often (in seconds) the algorithm re-evaluates device states. |
-| **Grid consumption entity** | Entity (Power) | — | Sensor reporting current grid import/export power (negative = export). |
-| **Power production entity** | Entity (Power) | — | Sensor reporting total PV production power. Leave empty if not available. |
+| **Grid consumption entity** | Entity (Power) | — | Sensor reporting current grid import/export power, negative means exporting to the grid. |
+| **Power production entity** | Entity (Power) | — | Sensor reporting total PV production power, must always be positive. Leave empty if not available. |
 | **Subscribe to state-change events** | Boolean | False | When enabled, the algorithm also reacts immediately to sensor state-change events instead of only polling. |
 | **Battery state of charge entity** | Entity (%) | — | Sensor reporting the battery state of charge in percent. Leave empty if no battery is present. |
-| **Battery consumption entity** | Entity (Power) | — | Sensor reporting current battery charge/discharge power. Leave empty if no battery is present. |
+| **Battery consumption entity** | Entity (Power) | — | Sensor reporting current battery discharge power, negative means the battery is charging. Leave empty if no battery is present. |
 | **Daily reset time** | Time | 05:00 | Time of day at which daily runtimes are reset. |
 
 ### Basic Device Configuration
