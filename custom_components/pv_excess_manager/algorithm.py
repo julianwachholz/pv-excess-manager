@@ -69,8 +69,6 @@ class PVExcessManagerAlgorithm:
             battery_soc,
         )
 
-        # TODO: power_production isn't used in the algo yet
-
         current_import = max(0.0, grid_consumption)
         current_export = max(0.0, -grid_consumption)
         virtual_excess = current_export - current_import
@@ -221,6 +219,25 @@ class PVExcessManagerAlgorithm:
                     total_requested += device.requested_power
                     continue
                 logger.debug("Device %s is locked but can change power. Evaluating power adjustment.", device.name)
+
+            # If an active device is below nominal draw while PV production is also below
+            # the device nominal power, disable it to avoid potential grid import if it ramps up.
+            if (
+                power_production is not None
+                and not device.is_locked
+                and device.current_power < device.power_nominal
+                and power_production < device.power_nominal
+            ):
+                logger.debug(
+                    "Device %s is ON below nominal (%s < %s) while production is low (%s < %s). Turning off.",
+                    device.name,
+                    device.current_power,
+                    device.power_nominal,
+                    power_production,
+                    device.power_nominal,
+                )
+                target_action = (device.unique_id, 0)
+                break
 
             # Check if device must be forced off immediately (skip for locked devices)
             if not device.is_locked and not device.check_usable(check_battery=False):
