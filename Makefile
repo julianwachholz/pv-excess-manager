@@ -5,5 +5,8 @@ help:
 install:
 	uv sync
 
+link:
+	ln -fs $(PWD)/custom_components ./config/custom_components
+
 run:
 	uv run hass -c ./config
