@@ -40,7 +40,12 @@ async def async_setup_entry(
         )
         return
 
-    async_add_entities([DevicePriorityNumber(hass, device)])
+    async_add_entities(
+        [
+            DevicePriorityNumber(hass, device),
+            DeviceMinBatterySocNumber(hass, device),
+        ]
+    )
 
 
 class DevicePriorityNumber(RestoreNumber):
@@ -78,6 +83,56 @@ class DevicePriorityNumber(RestoreNumber):
         """Update the priority value and propagate it to the managed device."""
         self._attr_native_value = value
         self._device.priority = int(value)
+        self.async_write_ha_state()
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Get device info."""
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(const.DOMAIN, self._device.name)},
+            name=f"{const.NAME}: {self._device.name}",
+            manufacturer=const.AUTHOR,
+            model=const.NAME,
+        )
+
+
+class DeviceMinBatterySocNumber(RestoreNumber):
+    """Number entity for setting the minimum battery SOC required before a device may be activated."""
+
+    _attr_native_min_value = 0
+    _attr_native_max_value = 100
+    _attr_native_step = 1
+    _attr_mode = NumberMode.SLIDER
+    _attr_native_unit_of_measurement = "%"
+    _attr_icon = "mdi:battery-charging-low"
+
+    def __init__(self, hass: HomeAssistant, device: ManagedDevice) -> None:
+        """Initialize the minimum battery SOC number entity."""
+        self._hass = hass
+        self._device = device
+
+        self._attr_name = "Minimum Battery SOC"
+        self._attr_has_entity_name = True
+        self._attr_unique_id = f"pv_excess_manager_{device.slug}_battery_min_soc"
+        self.entity_id = f"{INPUT_NUMBER_DOMAIN}.{self._attr_unique_id}"
+
+        self._attr_native_value = float(device.battery_min_soc)
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last known minimum battery SOC value."""
+        await super().async_added_to_hass()
+
+        last_data = await self.async_get_last_number_data()
+        if last_data and last_data.native_value is not None:
+            self._attr_native_value = last_data.native_value
+
+        self._device.battery_min_soc = float(self._attr_native_value)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Update the minimum battery SOC value and propagate it to the managed device."""
+        self._attr_native_value = value
+        self._device.battery_min_soc = float(value)
         self.async_write_ha_state()
 
     @property

@@ -50,7 +50,6 @@
           "offtime_duration_min": "Minimum OFF time",
           "activate_actions": "Activation actions",
           "deactivate_actions": "Deactivation actions",
-          "battery_min_soc": "Minimum battery SOC",
           "standby_power": "Standby power threshold",
           "min_daily_runtime": "Minimum daily runtime",
           "max_daily_runtime": "Maximum daily runtime",
@@ -68,7 +67,6 @@
           "offtime_duration_min": "Minimum time (minutes) the device must stay off after being deactivated.",
           "activate_actions": "Actions to execute when the device is activated.",
           "deactivate_actions": "Actions to execute when the device is deactivated.",
-          "battery_min_soc": "The battery must be at or above this state of charge (%) before this device may be switched on.",
           "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
@@ -94,7 +92,6 @@
           "activate_actions": "Activation actions",
           "deactivate_actions": "Deactivation actions",
           "power_divide_factor": "Power divide factor",
-          "battery_min_soc": "Minimum battery SOC",
           "standby_power": "Standby power threshold",
           "min_daily_runtime": "Minimum daily runtime",
           "max_daily_runtime": "Maximum daily runtime",
@@ -117,7 +114,6 @@
           "activate_actions": "Actions to execute when the device is activated.",
           "deactivate_actions": "Actions to execute when the device is deactivated.",
           "power_divide_factor": "Divide the excess power by this factor before applying it to the power control entity (e.g. for three-phase devices set to 3).",
-          "battery_min_soc": "The battery must be at or above this state of charge (%) before this device may be switched on.",
           "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
@@ -163,7 +159,6 @@
           "offtime_duration_min": "Minimum OFF time",
           "activate_actions": "Activation actions",
           "deactivate_actions": "Deactivation actions",
-          "battery_min_soc": "Minimum battery SOC",
           "standby_power": "Standby power threshold",
           "min_daily_runtime": "Minimum daily runtime",
           "max_daily_runtime": "Maximum daily runtime",
@@ -181,7 +176,6 @@
           "offtime_duration_min": "Minimum time (minutes) the device must stay off after being deactivated.",
           "activate_actions": "Actions to execute when the device is activated.",
           "deactivate_actions": "Actions to execute when the device is deactivated.",
-          "battery_min_soc": "The battery must be at or above this state of charge (%) before this device may be switched on.",
           "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
@@ -207,7 +201,6 @@
           "activate_actions": "Activation actions",
           "deactivate_actions": "Deactivation actions",
           "power_divide_factor": "Power divide factor",
-          "battery_min_soc": "Minimum battery SOC",
           "standby_power": "Standby power threshold",
           "min_daily_runtime": "Minimum daily runtime",
           "max_daily_runtime": "Maximum daily runtime",
@@ -230,7 +223,6 @@
           "activate_actions": "Actions to execute when the device is activated.",
           "deactivate_actions": "Actions to execute when the device is deactivated.",
           "power_divide_factor": "Divide the excess power by this factor before applying it to the power control entity (e.g. for three-phase devices set to 3).",
-          "battery_min_soc": "The battery must be at or above this state of charge (%) before this device may be switched on.",
           "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
@@ -270,6 +262,9 @@
     "number": {
       "priority": {
         "name": "Priority"
+      },
+      "battery_min_soc": {
+        "name": "Minimum Battery SOC"
       }
     }
   },
