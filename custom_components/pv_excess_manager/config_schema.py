@@ -211,15 +211,6 @@ basic_device_schema = vol.Schema(
         ),
         vol.Required(const.CONF_ACTIVATE_ACTIONS): selector.ActionSelector(),
         vol.Required(const.CONF_DEACTIVATE_ACTIONS): selector.ActionSelector(),
-        vol.Optional(const.CONF_BATTERY_MIN_SOC): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0,
-                max=100,
-                step=1,
-                mode=selector.NumberSelectorMode.SLIDER,
-                unit_of_measurement="%",
-            ),
-        ),
         vol.Optional(const.CONF_STANDBY_POWER): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=0,
@@ -382,15 +373,6 @@ variable_device_schema = vol.Schema(
                 step=1,
                 mode=selector.NumberSelectorMode.BOX,
             )
-        ),
-        vol.Optional(const.CONF_BATTERY_MIN_SOC): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0,
-                max=100,
-                step=1,
-                mode=selector.NumberSelectorMode.SLIDER,
-                unit_of_measurement="%",
-            ),
         ),
         vol.Optional(const.CONF_STANDBY_POWER): selector.NumberSelector(
             selector.NumberSelectorConfig(
