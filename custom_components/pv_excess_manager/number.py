@@ -117,8 +117,6 @@ class DeviceMinBatterySocNumber(RestoreNumber):
         self._attr_unique_id = f"pv_excess_manager_{device.slug}_battery_min_soc"
         self.entity_id = f"{INPUT_NUMBER_DOMAIN}.{self._attr_unique_id}"
 
-        self._attr_native_value = float(device.battery_min_soc)
-
     async def async_added_to_hass(self) -> None:
         """Restore the last known minimum battery SOC value."""
         await super().async_added_to_hass()
@@ -126,6 +124,8 @@ class DeviceMinBatterySocNumber(RestoreNumber):
         last_data = await self.async_get_last_number_data()
         if last_data and last_data.native_value is not None:
             self._attr_native_value = last_data.native_value
+        else:
+            self._attr_native_value = float(self._device.battery_min_soc)
 
         self._device.battery_min_soc = float(self._attr_native_value)
 
