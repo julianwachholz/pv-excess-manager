@@ -125,6 +125,13 @@ class PVExcessManagerAlgorithm:
                     # Device is locked, unusable by template or max daily runtime reached
                     continue
 
+                if device.disabled_due_to_standby:
+                    logger.debug(
+                        "Device %s was disabled due to standby and will stay off until daily reset.",
+                        device.name,
+                    )
+                    continue
+
                 if device.should_be_forced_offpeak():
                     requested_power = device.power_nominal
                     if device.can_change_power:
@@ -254,6 +261,7 @@ class PVExcessManagerAlgorithm:
                     device.current_power,
                     device.standby_power,
                 )
+                device.disable_due_to_standby()
                 target_action = (device.unique_id, 0)
                 break
 

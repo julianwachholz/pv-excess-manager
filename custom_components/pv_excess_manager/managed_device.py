@@ -98,6 +98,7 @@ class ManagedDevice:
 
     _battery_min_soc: float | Template = 0
     standby_power: float = 0
+    disabled_due_to_standby: bool = False
 
     current_power: float = 0
     requested_power: float = 0
@@ -397,6 +398,11 @@ class ManagedDevice:
         """Enable or disable the ManagedDevice for PV Excess Manager."""
         logger.info("%s - set managed=%s", self.name, is_managed)
         self.is_managed = is_managed
+
+    def disable_due_to_standby(self):
+        """Disable re-activation for the current day after standby deactivation."""
+        self.disabled_due_to_standby = True
+        logger.info("%s disabled due to standby detection.", self.name)
 
     @property
     def is_active(self) -> bool:

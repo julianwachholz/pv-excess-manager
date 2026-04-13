@@ -304,6 +304,7 @@ class DailyRuntimeSensor(SensorEntity, RestoreEntity):
     async def on_midnight(self, _=None) -> None:
         """Reset the counter at end of the day cycle."""
         self._attr_native_value = 0
+        self._device.disabled_due_to_standby = False
 
         logger.info("Call of on_midnight to reset runtime")
 
