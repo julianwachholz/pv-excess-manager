@@ -18,6 +18,7 @@ from .config_schema import (
     basic_device_schema,
     main_schema,
     new_device_schema,
+    phase_switching_wallbox_device_schema,
     variable_device_schema,
 )
 from .coordinator import PVExcessManagerCoordinator
@@ -107,6 +108,8 @@ class PVExcessManagerBaseConfigFlow:
             return await self.async_step_device_basic()
         if device_type == const.CONF_DEVICE_VARIABLE:
             return await self.async_step_device_variable()
+        if device_type == const.CONF_DEVICE_PHASE_SWITCHING_WALLBOX:
+            return await self.async_step_device_phase_switching_wallbox()
         logger.warning("Unexpected device type %r, skipping device configuration step", device_type)
         return await self.async_step_finalize()
 
@@ -146,6 +149,17 @@ class PVExcessManagerBaseConfigFlow:
         return await self.show_step(
             "device_variable",
             variable_device_schema,
+            user_input,
+            self.async_step_finalize,
+        )
+
+    async def async_step_device_phase_switching_wallbox(self, user_input: dict | None = None) -> FlowResult:
+        """Handle the flow steps for phase-switching wallbox device."""
+        logger.debug("ConfigFlow.async_step_device_phase_switching_wallbox user_input=%s", user_input)
+
+        return await self.show_step(
+            "device_phase_switching_wallbox",
+            phase_switching_wallbox_device_schema,
             user_input,
             self.async_step_finalize,
         )
@@ -208,6 +222,8 @@ class PVExcessManagerOptionsFlow(PVExcessManagerBaseConfigFlow, OptionsFlow):
             return await self.async_step_device_basic(user_input)
         if self._initial_data.get(const.CONF_DEVICE_TYPE) == const.CONF_DEVICE_VARIABLE:
             return await self.async_step_device_variable(user_input)
+        if self._initial_data.get(const.CONF_DEVICE_TYPE) == const.CONF_DEVICE_PHASE_SWITCHING_WALLBOX:
+            return await self.async_step_device_phase_switching_wallbox(user_input)
         return None
 
     async def async_step_finalize(self, user_input: dict | None = None) -> ConfigFlowResult:

@@ -38,14 +38,17 @@ CONF_DEVICE_TYPE = "device_type"
 CONF_DEVICE_MAIN = "main"
 CONF_DEVICE_BASIC = "basic"
 CONF_DEVICE_VARIABLE = "variable"
+CONF_DEVICE_PHASE_SWITCHING_WALLBOX = "phase_switching_wallbox"
 CONF_ALL_CONFIG_TYPES = [
     CONF_DEVICE_MAIN,
     CONF_DEVICE_BASIC,
     CONF_DEVICE_VARIABLE,
+    CONF_DEVICE_PHASE_SWITCHING_WALLBOX,
 ]
 CONF_DEVICE_TYPES = [
     CONF_DEVICE_BASIC,
     CONF_DEVICE_VARIABLE,
+    CONF_DEVICE_PHASE_SWITCHING_WALLBOX,
 ]
 
 
@@ -85,6 +88,17 @@ DEFAULT_POWER_STEP = 230
 
 CONF_DURATION_POWER_MIN = "duration_power_min"
 CONF_POWER_DIVIDE_FACTOR = "power_divide_factor"
+
+# Phase-switching wallbox settings
+CONF_MIN_CURRENT = "min_current"
+CONF_MAX_CURRENT = "max_current"
+DEFAULT_MIN_CURRENT = 6
+DEFAULT_MAX_CURRENT = 16
+
+CONF_CURRENT_PHASES_ENTITY_ID = "current_phases_entity_id"
+CONF_VOLTAGE_ENTITY_ID = "voltage_entity_id"
+CONF_VOLTAGE = "voltage"
+DEFAULT_VOLTAGE = 230
 
 # Battery must have at least this SOC to allow use of this device
 CONF_BATTERY_MIN_SOC = "battery_min_soc"
