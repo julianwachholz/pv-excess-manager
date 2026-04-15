@@ -35,33 +35,33 @@ class PVExcessManagerAlgorithm:
     def _adjust_phase_switching_power(device: ManagedDevice, requested_power: float) -> float:
         """Adjust requested power and phase target for phase-switching wallboxes."""
         if not device.is_phase_switching_wallbox or requested_power <= 0:
-            device.set_target_phase_count(None)
+            device.set_requested_phases(None)
             return requested_power
 
         current_phase = device.get_current_phase_count()
         target_phase = device.phase_for_requested_power(requested_power)
 
         if not device.is_active:
-            device.set_target_phase_count(target_phase)
+            device.set_requested_phases(target_phase)
             return device.clamp_power_to_phase(requested_power, target_phase)
 
         if target_phase > current_phase:
             device.reset_deactivate_delay()
             if not device.is_activate_delay_passed():
-                device.set_target_phase_count(current_phase)
+                device.set_requested_phases(current_phase)
                 return device.clamp_power_to_phase(requested_power, current_phase)
             device.reset_activate_delay()
         elif target_phase < current_phase:
             device.reset_activate_delay()
             if not device.is_deactivate_delay_passed():
-                device.set_target_phase_count(current_phase)
+                device.set_requested_phases(current_phase)
                 return device.clamp_power_to_phase(requested_power, current_phase)
             device.reset_deactivate_delay()
         else:
             device.reset_activate_delay()
             device.reset_deactivate_delay()
 
-        device.set_target_phase_count(target_phase)
+        device.set_requested_phases(target_phase)
         return device.clamp_power_to_phase(requested_power, target_phase)
 
     @classmethod

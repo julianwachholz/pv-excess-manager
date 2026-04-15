@@ -476,23 +476,6 @@ phase_switching_wallbox_device_schema = vol.Schema(
                 ]
             )
         ),
-        vol.Optional(const.CONF_VOLTAGE_ENTITY_ID): selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                filter=[
-                    selector.EntityFilterSelectorConfig(
-                        domain=SENSOR_DOMAIN,
-                        device_class=SensorDeviceClass.VOLTAGE,
-                    ),
-                    selector.EntityFilterSelectorConfig(
-                        domain=NUMBER_DOMAIN,
-                        device_class=NumberDeviceClass.VOLTAGE,
-                    ),
-                    selector.EntityFilterSelectorConfig(
-                        domain=INPUT_NUMBER_DOMAIN,
-                    ),
-                ]
-            )
-        ),
         vol.Optional(
             const.CONF_VOLTAGE,
             default=const.DEFAULT_VOLTAGE,

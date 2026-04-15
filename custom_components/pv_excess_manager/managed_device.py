@@ -97,12 +97,13 @@ class ManagedDevice:
     power_divide_factor: float = 1
     power_entity_id: str | None = None
     device_type: str = const.CONF_DEVICE_BASIC
+
+    # Phase-switching wallbox specific attributes
     min_current: float = const.DEFAULT_MIN_CURRENT
     max_current: float = const.DEFAULT_MAX_CURRENT
     current_phases_entity_id: str | None = None
-    voltage_entity_id: str | None = None
     voltage: float = const.DEFAULT_VOLTAGE
-    _target_phase_count: int | None = None
+    _requested_phases: int | None = None
 
     _battery_min_soc: float | Template = 0
     standby_power: float = 0
@@ -172,11 +173,7 @@ class ManagedDevice:
                 msg = f"Device {self.name} requires current_phases_entity_id."
                 raise ConfigurationError(msg)
             self.current_phases_entity_id = cv.entity_id_or_uuid(phases_entity)
-
-            if voltage_entity_id := device_config.get(const.CONF_VOLTAGE_ENTITY_ID):
-                self.voltage_entity_id = cv.entity_id_or_uuid(voltage_entity_id)
             self.voltage = cv.positive_float(device_config.get(const.CONF_VOLTAGE) or const.DEFAULT_VOLTAGE)
-
             self.power_nominal = self.min_power_for_phase(self.min_supported_phase)
         else:
             self.power_nominal = cv.positive_float(device_config.get(const.CONF_NOMINAL_POWER) or 0)
@@ -291,8 +288,7 @@ class ManagedDevice:
 
         parsed_options: set[int] = set()
         for option in options:
-            parsed = self._parse_phase_count(option)
-            if parsed is not None:
+            if parsed := self._parse_phase_count(option):
                 parsed_options.add(parsed)
         return sorted(parsed_options) if parsed_options else default
 
@@ -329,22 +325,6 @@ class ManagedDevice:
         """Return voltage configured for the wallbox."""
         if not self.is_phase_switching_wallbox:
             return const.DEFAULT_VOLTAGE
-
-        if self.voltage_entity_id:
-            voltage_state = self.hass.states.get(self.voltage_entity_id)
-            if voltage_state and voltage_state.state not in [None, STATE_UNKNOWN, STATE_UNAVAILABLE]:
-                try:
-                    parsed_voltage = float(voltage_state.state)
-                    if parsed_voltage > 0:
-                        return parsed_voltage
-                except TypeError, ValueError:
-                    logger.debug(
-                        "Voltage entity %s for device %s has invalid value %s",
-                        self.voltage_entity_id,
-                        self.name,
-                        voltage_state.state,
-                    )
-
         return self.voltage
 
     def min_power_for_phase(self, phase_count: int) -> float:
@@ -363,10 +343,10 @@ class ManagedDevice:
         current_phase = self.get_current_phase_count()
         supported_phases = self.supported_phase_counts()
 
-        if requested_power <= 0:
+        if requested_power <= 0 or len(supported_phases) == 1:
             return current_phase
 
-        for phase_count in sorted(supported_phases):
+        for phase_count in supported_phases:
             min_power = self.min_power_for_phase(phase_count)
             max_power = self.max_power_for_phase(phase_count)
             if min_power <= requested_power <= max_power:
@@ -396,9 +376,9 @@ class ManagedDevice:
         max_power = self.max_power_for_phase(phase_count)
         return max(min_power, min(requested_power, max_power))
 
-    def set_target_phase_count(self, phase_count: int | None) -> None:
+    def set_requested_phases(self, phase_count: int | None) -> None:
         """Set target phase count for next action."""
-        self._target_phase_count = phase_count
+        self._requested_phases = phase_count
 
     async def apply_phase_switch(self, phase_count: int) -> None:
         """Write phase count target to the configured phase entity."""
@@ -441,19 +421,19 @@ class ManagedDevice:
             requested_power,
         )
 
-        target_phase_count = self._target_phase_count or self.get_current_phase_count()
+        requested_phases = self._requested_phases or self.get_current_phase_count()
         requested_power_for_service = requested_power
         if self.is_phase_switching_wallbox and requested_power > 0:
-            requested_power_for_service = self.clamp_power_to_phase(requested_power, target_phase_count)
+            requested_power_for_service = self.clamp_power_to_phase(requested_power, requested_phases)
 
         self.requested_power = requested_power_for_service
 
         action_context = Context()
         script_variables = {
             "requested_power": requested_power_for_service / self.power_divide_factor,
+            "requested_phases": requested_phases,
             "current_power": self.current_power,
             "power_divide_factor": self.power_divide_factor,
-            "target_phase_count": target_phase_count,
         }
 
         target_entity = self.entity_id
@@ -478,11 +458,10 @@ class ManagedDevice:
                 requested_power = requested_power_for_service / self.power_divide_factor
                 target_entity = self.power_entity_id
                 if self.is_phase_switching_wallbox and requested_power_for_service > 0:
-                    if target_phase_count != self.get_current_phase_count():
-                        await self.apply_phase_switch(target_phase_count)
                     voltage = self.get_voltage()
-                    requested_power = requested_power_for_service / (voltage * target_phase_count)
+                    requested_power = requested_power_for_service / (voltage * requested_phases)
                     requested_power = max(self.min_current, min(requested_power, self.max_current))
+                    script_variables["requested_power"] = requested_power
             elif not actions:
                 msg = f"Device {self.name} cannot change power because no actions and no power_entity_id are defined."
                 raise RuntimeError(msg)
@@ -494,18 +473,19 @@ class ManagedDevice:
                 sequence=actions,
                 name=f"{action_type}: {self.name}",
                 domain=const.DOMAIN,
-                # variables=script_variables,
             )
             await script.async_run(
                 run_variables=script_variables,
                 context=action_context,
             )
         else:
+            if self.is_phase_switching_wallbox and requested_phases != self.get_current_phase_count():
+                await self.apply_phase_switch(requested_phases)
             if self.can_change_power:
                 await set_entity_value(self.hass, target_entity, requested_power)
             await default_action(self.hass, target_entity, requested_power)
 
-        self._target_phase_count = None
+        self._requested_phases = None
 
         if action_type in {ACTION_ACTIVATE, ACTION_DEACTIVATE}:
             self.reset_next_date_available(action_type)
