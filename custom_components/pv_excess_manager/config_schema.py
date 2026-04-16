@@ -450,7 +450,7 @@ phase_switching_wallbox_device_schema = vol.Schema(
             default=const.DEFAULT_MIN_CURRENT,
         ): selector.NumberSelector(
             selector.NumberSelectorConfig(
-                min=0,
+                min=1,
                 step=1,
                 mode=selector.NumberSelectorMode.BOX,
                 unit_of_measurement="A",
@@ -461,7 +461,7 @@ phase_switching_wallbox_device_schema = vol.Schema(
             default=const.DEFAULT_MAX_CURRENT,
         ): selector.NumberSelector(
             selector.NumberSelectorConfig(
-                min=0,
+                min=1,
                 step=1,
                 mode=selector.NumberSelectorMode.BOX,
                 unit_of_measurement="A",
