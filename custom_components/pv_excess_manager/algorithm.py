@@ -32,7 +32,12 @@ class PVExcessManagerAlgorithm:
         return float(requested)
 
     @staticmethod
-    def _adjust_phase_switching_power(device: ManagedDevice, requested_power: float) -> float:
+    def _adjust_phase_switching_power(
+        device: ManagedDevice,
+        requested_power: float,
+        *,
+        force_minimum_phases: bool = False,
+    ) -> float:
         """Adjust requested power and phase target for phase-switching wallboxes."""
         if not device.is_phase_switching_wallbox or requested_power <= 0:
             device.set_requested_phases(None)
@@ -40,6 +45,8 @@ class PVExcessManagerAlgorithm:
 
         current_phase = device.get_current_phase_count()
         target_phase = device.phase_for_requested_power(requested_power)
+        if force_minimum_phases:
+            target_phase = device.min_supported_phase
 
         if not device.is_active:
             device.set_requested_phases(target_phase)
@@ -52,6 +59,11 @@ class PVExcessManagerAlgorithm:
                 return device.clamp_power_to_phase(requested_power, current_phase)
             device.reset_activate_delay()
         elif target_phase < current_phase:
+            if force_minimum_phases:
+                device.reset_activate_delay()
+                device.reset_deactivate_delay()
+                device.set_requested_phases(target_phase)
+                return device.clamp_power_to_phase(requested_power, target_phase)
             device.reset_activate_delay()
             if not device.is_deactivate_delay_passed():
                 device.set_requested_phases(current_phase)
@@ -352,13 +364,19 @@ class PVExcessManagerAlgorithm:
                 # before starting the deactivation timer. This avoids jumping straight from a
                 # high power level to off when only the minimum power is no longer supportable.
                 if device.can_change_power and device.requested_power > device.power_nominal:
+                    requested_power = device.power_nominal
+                    requested_power = cls._adjust_phase_switching_power(
+                        device,
+                        requested_power,
+                        force_minimum_phases=True,
+                    )
                     logger.debug(
                         "Device %s stepping down to minimum power %s W before deactivation.",
                         device.name,
-                        device.power_nominal,
+                        requested_power,
                     )
-                    target_action = (device.unique_id, device.power_nominal)
-                    total_requested += device.power_nominal
+                    target_action = (device.unique_id, requested_power)
+                    total_requested += requested_power
                     break
 
                 # Locked devices must not be deactivated; the on-duration takes precedence.
