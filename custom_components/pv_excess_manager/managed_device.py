@@ -481,7 +481,7 @@ class ManagedDevice:
         else:
             if self.is_phase_switching_wallbox and requested_phases != self.get_current_phase_count():
                 await self.apply_phase_switch(requested_phases)
-            if self.can_change_power:
+            if self.can_change_power and action_type == ACTION_ACTIVATE:
                 await set_entity_value(self.hass, target_entity, requested_power)
             await default_action(self.hass, target_entity, requested_power)
 
