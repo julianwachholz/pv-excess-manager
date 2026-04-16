@@ -75,7 +75,7 @@ Devices are sorted by their **priority value** (1 = highest). The algorithm proc
 - **One action per cycle maximum**: activate one device, deactivate one, or adjust one device's power
 - **No randomness**: same conditions always produce the same decision
 - **Delays prevent thrashing**: minimum ON/OFF durations and activation/deactivation delays prevent rapid oscillations
-- **Safety locks**: devices respect minimum battery charge (SOC), standby power thresholds, and daily runtime limits
+- **Safety locks**: devices respect minimum battery charge (SOC), standby power thresholds (with daily re-enable lock), and daily runtime limits
 
 ## Configuration Reference
 
@@ -111,7 +111,7 @@ Configure for on/off devices (switches, boolean entities).
 | **Activation actions** | Actions | — | Custom actions to execute when the device is activated. Will use `turn_on` service on the controlled entity by default. |
 | **Deactivation actions** | Actions | — | Custom actions to execute when the device is deactivated. Will use `turn_off` service on the controlled entity by default. |
 | **Minimum battery SOC** | Number (%) | 0 | The battery must be at or above this state of charge (%) before this device may be switched on. |
-| **Standby power threshold** | Number (W) | 0 | If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated. Prevents accidental reactivations that would have to be stopped abruptly. |
+| **Standby power threshold** | Number (W) | 0 | If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated and not re-enabled until the next daily reset time. |
 | **Minimum daily runtime** | Number (min) | 0 | Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today. |
 | **Maximum daily runtime** | Number (min) | 1440 | Switch the device off once it has accumulated this many minutes of runtime today. |
 | **Off-peak fallback time** | Time | — | Time of day at which the device is force-started if its minimum daily runtime has not been reached. |
