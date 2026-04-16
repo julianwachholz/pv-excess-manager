@@ -401,8 +401,6 @@ class PVExcessManagerAlgorithm:
                 # Skip additional PV excess checks
                 continue
 
-            is_surplus_insufficient = False
-
             # For variable power devices, account for the gap between the previously requested
             # power and the actual current consumption. When a device hasn't reached its commanded
             # level yet (e.g., due to ramp-up or hardware limits), the actual consumption
@@ -458,7 +456,8 @@ class PVExcessManagerAlgorithm:
                 continue
 
             # Surplus is sufficient to keep this device on, check if it can stay on or should have power changed
-            device.reset_deactivate_delay()
+            if not device.is_phase_switching_wallbox:
+                device.reset_deactivate_delay()
 
             if device.can_change_power:
                 requested_power = cls._get_variable_power(effective_virtual_excess, device)
