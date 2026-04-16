@@ -99,7 +99,7 @@
         },
         "data_description": {
           "name": "A friendly name for this device.",
-          "entity_id": "The entity used to toggle the device on or off (optional for variable-only devices).",
+          "entity_id": "The entity used to toggle the device on or off.",
           "nominal_power": "Initial power level used when the device is first activated (watts).",
           "power_sensor_entity_id": "Sensor reporting the actual power consumption of this device.",
           "power_entity_id": "The number or input_number entity used to set the current power level of this device.",
@@ -147,7 +147,7 @@
         },
         "data_description": {
           "name": "A friendly name for this wallbox.",
-          "entity_id": "The entity used to toggle charging on or off (optional if handled only by actions).",
+          "entity_id": "The entity used to toggle charging on or off.",
           "power_sensor_entity_id": "Sensor reporting the actual charging power of this wallbox.",
           "power_entity_id": "Number or input_number entity used to set charging current (A).",
           "min_current": "Minimum allowed charging current (A).",
@@ -257,7 +257,7 @@
         },
         "data_description": {
           "name": "A friendly name for this device.",
-          "entity_id": "The entity used to toggle the device on or off (optional for variable-only devices).",
+          "entity_id": "The entity used to toggle the device on or off.",
           "nominal_power": "Initial power level used when the device is first activated (watts).",
           "power_sensor_entity_id": "Sensor reporting the actual power consumption of this device.",
           "power_entity_id": "The number or input_number entity used to set the current power level of this device.",
@@ -305,7 +305,7 @@
         },
         "data_description": {
           "name": "A friendly name for this wallbox.",
-          "entity_id": "The entity used to toggle charging on or off (optional if handled only by actions).",
+          "entity_id": "The entity used to toggle charging on or off.",
           "power_sensor_entity_id": "Sensor reporting the actual charging power of this wallbox.",
           "power_entity_id": "Number or input_number entity used to set charging current (A).",
           "min_current": "Minimum allowed charging current (A).",

@@ -129,7 +129,7 @@ main_schema = vol.Schema(
 basic_device_schema = vol.Schema(
     {
         vol.Required(const.CONF_NAME): str,
-        vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
+        vol.Required(const.CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[
                     INPUT_BOOLEAN_DOMAIN,
@@ -244,7 +244,7 @@ basic_device_schema = vol.Schema(
 variable_device_schema = vol.Schema(
     {
         vol.Required(const.CONF_NAME): str,
-        vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
+        vol.Required(const.CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[
                     INPUT_BOOLEAN_DOMAIN,
@@ -407,7 +407,7 @@ variable_device_schema = vol.Schema(
 phase_switching_wallbox_device_schema = vol.Schema(
     {
         vol.Required(const.CONF_NAME): str,
-        vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
+        vol.Required(const.CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[
                     INPUT_BOOLEAN_DOMAIN,
