@@ -31,6 +31,39 @@ class PVExcessManagerAlgorithm:
             requested = power_min + (steps * power_step)
         return float(requested)
 
+    @staticmethod
+    def _adjust_phase_switching_power(device: ManagedDevice, requested_power: float) -> float:
+        """Adjust requested power and phase target for phase-switching wallboxes."""
+        if not device.is_phase_switching_wallbox or requested_power <= 0:
+            device.set_requested_phases(None)
+            return requested_power
+
+        current_phase = device.get_current_phase_count()
+        target_phase = device.phase_for_requested_power(requested_power)
+
+        if not device.is_active:
+            device.set_requested_phases(target_phase)
+            return device.clamp_power_to_phase(requested_power, target_phase)
+
+        if target_phase > current_phase:
+            device.reset_deactivate_delay()
+            if not device.is_activate_delay_passed():
+                device.set_requested_phases(current_phase)
+                return device.clamp_power_to_phase(requested_power, current_phase)
+            device.reset_activate_delay()
+        elif target_phase < current_phase:
+            device.reset_activate_delay()
+            if not device.is_deactivate_delay_passed():
+                device.set_requested_phases(current_phase)
+                return device.clamp_power_to_phase(requested_power, current_phase)
+            device.reset_deactivate_delay()
+        else:
+            device.reset_activate_delay()
+            device.reset_deactivate_delay()
+
+        device.set_requested_phases(target_phase)
+        return device.clamp_power_to_phase(requested_power, target_phase)
+
     @classmethod
     def run_calculation(  # noqa: PLR0915, PLR0912
         cls,
@@ -134,6 +167,7 @@ class PVExcessManagerAlgorithm:
                             device.power_nominal,
                             cls._get_variable_power(virtual_excess + device.current_power, device),
                         )
+                        requested_power = cls._adjust_phase_switching_power(device, requested_power)
 
                     logger.debug(
                         "Device %s is forced offpeak. Activating immediately, bypassing PV checks.",
@@ -147,6 +181,7 @@ class PVExcessManagerAlgorithm:
                 if device.can_change_power:
                     # Account for power already consumed by the device (e.g. via power sensor while inactive)
                     requested_power = cls._get_variable_power(virtual_excess + device.current_power, device)
+                    requested_power = cls._adjust_phase_switching_power(device, requested_power)
                     if requested_power == 0:
                         device.reset_activate_delay()
                         continue
@@ -267,6 +302,7 @@ class PVExcessManagerAlgorithm:
                 # If variable power, ensure it runs at least at nominal power during cheap tariffs
                 if device.can_change_power:
                     target_power = max(device.power_nominal, cls._get_variable_power(virtual_excess, device))
+                    target_power = cls._adjust_phase_switching_power(device, target_power)
                     is_power_in_range = abs(device.current_power - target_power) <= device.power_step / 2
 
                     if target_power > 0 and not is_power_in_range:
@@ -336,6 +372,7 @@ class PVExcessManagerAlgorithm:
 
             if device.can_change_power:
                 requested_power = cls._get_variable_power(effective_virtual_excess, device)
+                requested_power = cls._adjust_phase_switching_power(device, requested_power)
                 # Compare against device.requested_power (the previously sent command) rather
                 # than device.current_power (actual measurement). This ensures a reduction is
                 # triggered when the device hasn't reached its commanded level yet, even if the

@@ -12,7 +12,7 @@
         },
         "data_description": {
           "name": "A friendly name for this device.",
-          "device_type": "Select whether this is a basic on/off device or a variable-power device."
+          "device_type": "Select whether this is a basic on/off device, a variable-power device, or a phase-switching wallbox."
         }
       },
       "device_main": {
@@ -99,7 +99,7 @@
         },
         "data_description": {
           "name": "A friendly name for this device.",
-          "entity_id": "The entity used to toggle the device on or off (optional for variable-only devices).",
+          "entity_id": "The entity used to toggle the device on or off.",
           "nominal_power": "Initial power level used when the device is first activated (watts).",
           "power_sensor_entity_id": "Sensor reporting the actual power consumption of this device.",
           "power_entity_id": "The number or input_number entity used to set the current power level of this device.",
@@ -118,6 +118,55 @@
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
           "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
+        }
+      },
+      "device_phase_switching_wallbox": {
+        "title": "Phase-switching wallbox configuration",
+        "data": {
+          "name": "Name",
+          "entity_id": "Controlled entity",
+          "power_sensor_entity_id": "Power sensor entity",
+          "power_entity_id": "Charging current entity",
+          "min_current": "Minimum current",
+          "max_current": "Maximum current",
+          "current_phases_entity_id": "Current phases entity",
+          "voltage": "Fallback voltage",
+          "duration_power_min": "Minimum duration per power level",
+          "check_usable_template": "Check usable template",
+          "delay_activate_min": "Activation delay",
+          "ontime_duration_min": "Minimum ON time",
+          "delay_deactivate_min": "Deactivation delay",
+          "offtime_duration_min": "Minimum OFF time",
+          "activate_actions": "Activation actions",
+          "deactivate_actions": "Deactivation actions",
+          "battery_min_soc": "Minimum battery SOC",
+          "standby_power": "Standby power threshold",
+          "min_daily_runtime": "Minimum daily runtime",
+          "max_daily_runtime": "Maximum daily runtime",
+          "offpeak_time": "Off-peak fallback time"
+        },
+        "data_description": {
+          "name": "A friendly name for this wallbox.",
+          "entity_id": "The entity used to toggle charging on or off.",
+          "power_sensor_entity_id": "Sensor reporting the actual charging power of this wallbox.",
+          "power_entity_id": "Number or input_number entity used to set charging current (A).",
+          "min_current": "Minimum allowed charging current (A).",
+          "max_current": "Maximum allowed charging current (A).",
+          "current_phases_entity_id": "Select or number entity indicating active phase count (typically 1/3, optionally 2).",
+          "voltage": "Charging voltage (V) used for power calculations.",
+          "duration_power_min": "Minimum time (minutes) the wallbox must hold a power level before it is changed.",
+          "check_usable_template": "A template that evaluates to true when this device is eligible to be switched on.",
+          "delay_activate_min": "Minimum time (minutes) of sufficient excess power before turning on and before switching from lower to higher phase mode.",
+          "ontime_duration_min": "Minimum time (minutes) the wallbox must stay on after being activated.",
+          "delay_deactivate_min": "Minimum time (minutes) of insufficient excess power before turning off and before switching from higher to lower phase mode.",
+          "offtime_duration_min": "Minimum time (minutes) the wallbox must stay off after being deactivated.",
+          "activate_actions": "Actions to execute when the wallbox is activated.",
+          "deactivate_actions": "Actions to execute when the wallbox is deactivated.",
+          "battery_min_soc": "The battery must be at or above this state of charge (%) before this wallbox may be switched on.",
+          "standby_power": "If the wallbox is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "min_daily_runtime": "Force the wallbox on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
+          "max_daily_runtime": "Switch the wallbox off once it has accumulated this many minutes of runtime today.",
+          "offpeak_time": "Time of day at which the wallbox is force-started if its minimum daily runtime has not been reached."
         }
       }
     }
@@ -208,7 +257,7 @@
         },
         "data_description": {
           "name": "A friendly name for this device.",
-          "entity_id": "The entity used to toggle the device on or off (optional for variable-only devices).",
+          "entity_id": "The entity used to toggle the device on or off.",
           "nominal_power": "Initial power level used when the device is first activated (watts).",
           "power_sensor_entity_id": "Sensor reporting the actual power consumption of this device.",
           "power_entity_id": "The number or input_number entity used to set the current power level of this device.",
@@ -228,6 +277,55 @@
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
           "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
         }
+      },
+      "device_phase_switching_wallbox": {
+        "title": "Phase-switching wallbox configuration",
+        "data": {
+          "name": "Name",
+          "entity_id": "Controlled entity",
+          "power_sensor_entity_id": "Power sensor entity",
+          "power_entity_id": "Charging current entity",
+          "min_current": "Minimum current",
+          "max_current": "Maximum current",
+          "current_phases_entity_id": "Current phases entity",
+          "voltage": "Fallback voltage",
+          "duration_power_min": "Minimum duration per power level",
+          "check_usable_template": "Check usable template",
+          "delay_activate_min": "Activation delay",
+          "ontime_duration_min": "Minimum ON time",
+          "delay_deactivate_min": "Deactivation delay",
+          "offtime_duration_min": "Minimum OFF time",
+          "activate_actions": "Activation actions",
+          "deactivate_actions": "Deactivation actions",
+          "battery_min_soc": "Minimum battery SOC",
+          "standby_power": "Standby power threshold",
+          "min_daily_runtime": "Minimum daily runtime",
+          "max_daily_runtime": "Maximum daily runtime",
+          "offpeak_time": "Off-peak fallback time"
+        },
+        "data_description": {
+          "name": "A friendly name for this wallbox.",
+          "entity_id": "The entity used to toggle charging on or off.",
+          "power_sensor_entity_id": "Sensor reporting the actual charging power of this wallbox.",
+          "power_entity_id": "Number or input_number entity used to set charging current (A).",
+          "min_current": "Minimum allowed charging current (A).",
+          "max_current": "Maximum allowed charging current (A).",
+          "current_phases_entity_id": "Select or number entity indicating active phase count (typically 1/3, optionally 2).",
+          "voltage": "Fallback voltage (V) used for charging power calculations.",
+          "duration_power_min": "Minimum time (minutes) the wallbox must hold a power level before it is changed.",
+          "check_usable_template": "A template that evaluates to true when this device is eligible to be switched on.",
+          "delay_activate_min": "Minimum time (minutes) of sufficient excess power before turning on and before switching from lower to higher phase mode.",
+          "ontime_duration_min": "Minimum time (minutes) the wallbox must stay on after being activated.",
+          "delay_deactivate_min": "Minimum time (minutes) of insufficient excess power before turning off and before switching from higher to lower phase mode.",
+          "offtime_duration_min": "Minimum time (minutes) the wallbox must stay off after being deactivated.",
+          "activate_actions": "Actions to execute when the wallbox is activated.",
+          "deactivate_actions": "Actions to execute when the wallbox is deactivated.",
+          "battery_min_soc": "The battery must be at or above this state of charge (%) before this wallbox may be switched on.",
+          "standby_power": "If the wallbox is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "min_daily_runtime": "Force the wallbox on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
+          "max_daily_runtime": "Switch the wallbox off once it has accumulated this many minutes of runtime today.",
+          "offpeak_time": "Time of day at which the wallbox is force-started if its minimum daily runtime has not been reached."
+        }
       }
     }
   },
@@ -235,7 +333,8 @@
     "device_type": {
       "options": {
         "basic": "Basic (on/off)",
-        "variable": "Variable power"
+        "variable": "Variable power",
+        "phase_switching_wallbox": "Phase-switching wallbox"
       }
     }
   },

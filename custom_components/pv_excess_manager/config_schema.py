@@ -129,7 +129,7 @@ main_schema = vol.Schema(
 basic_device_schema = vol.Schema(
     {
         vol.Required(const.CONF_NAME): str,
-        vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
+        vol.Required(const.CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[
                     INPUT_BOOLEAN_DOMAIN,
@@ -244,7 +244,7 @@ basic_device_schema = vol.Schema(
 variable_device_schema = vol.Schema(
     {
         vol.Required(const.CONF_NAME): str,
-        vol.Optional(const.CONF_ENTITY_ID): selector.EntitySelector(
+        vol.Required(const.CONF_ENTITY_ID): selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[
                     INPUT_BOOLEAN_DOMAIN,
@@ -373,6 +373,181 @@ variable_device_schema = vol.Schema(
                 step=1,
                 mode=selector.NumberSelectorMode.BOX,
             )
+        ),
+        vol.Optional(const.CONF_STANDBY_POWER): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="W",
+            ),
+        ),
+        vol.Optional(const.CONF_MIN_DAILY_RUNTIME): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Optional(const.CONF_MAX_DAILY_RUNTIME): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Optional(const.CONF_OFFPEAK_TIME): selector.TimeSelector(),
+    }
+)
+
+phase_switching_wallbox_device_schema = vol.Schema(
+    {
+        vol.Required(const.CONF_NAME): str,
+        vol.Required(const.CONF_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[
+                    INPUT_BOOLEAN_DOMAIN,
+                    SWITCH_DOMAIN,
+                    HUMIDIFIER_DOMAIN,
+                    CLIMATE_DOMAIN,
+                    FAN_DOMAIN,
+                    LIGHT_DOMAIN,
+                    SELECT_DOMAIN,
+                ]
+            )
+        ),
+        vol.Optional(const.CONF_POWER_SENSOR_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                filter=[
+                    selector.EntityFilterSelectorConfig(
+                        domain=SENSOR_DOMAIN,
+                        device_class=SensorDeviceClass.POWER,
+                    ),
+                    selector.EntityFilterSelectorConfig(
+                        domain=NUMBER_DOMAIN,
+                        device_class=NumberDeviceClass.POWER,
+                    ),
+                    selector.EntityFilterSelectorConfig(
+                        domain=INPUT_NUMBER_DOMAIN,
+                    ),
+                ],
+            ),
+        ),
+        vol.Required(const.CONF_POWER_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[
+                    INPUT_NUMBER_DOMAIN,
+                    NUMBER_DOMAIN,
+                ]
+            )
+        ),
+        vol.Required(
+            const.CONF_MIN_CURRENT,
+            default=const.DEFAULT_MIN_CURRENT,
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="A",
+            ),
+        ),
+        vol.Required(
+            const.CONF_MAX_CURRENT,
+            default=const.DEFAULT_MAX_CURRENT,
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="A",
+            ),
+        ),
+        vol.Required(const.CONF_CURRENT_PHASES_ENTITY_ID): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[
+                    SELECT_DOMAIN,
+                    INPUT_NUMBER_DOMAIN,
+                    NUMBER_DOMAIN,
+                ]
+            )
+        ),
+        vol.Optional(
+            const.CONF_VOLTAGE,
+            default=const.DEFAULT_VOLTAGE,
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="V",
+            )
+        ),
+        vol.Optional(const.CONF_DURATION_POWER_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0.0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Optional(
+            const.CONF_CHECK_USABLE_TEMPLATE,
+        ): selector.TemplateSelector(),
+        vol.Optional(const.CONF_DELAY_ACTIVATE_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Optional(
+            const.CONF_ONTIME_DURATION_MIN,
+            default=const.DEFAULT_ONTIME_DURATION_MIN,
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Optional(const.CONF_DELAY_DEACTIVATE_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Optional(const.CONF_OFFTIME_DURATION_MIN): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="min",
+            )
+        ),
+        vol.Required(const.CONF_ACTIVATE_ACTIONS): selector.ActionSelector(),
+        vol.Required(const.CONF_DEACTIVATE_ACTIONS): selector.ActionSelector(),
+        vol.Optional(const.CONF_BATTERY_MIN_SOC): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            ),
         ),
         vol.Optional(const.CONF_STANDBY_POWER): selector.NumberSelector(
             selector.NumberSelectorConfig(
