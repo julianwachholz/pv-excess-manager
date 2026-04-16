@@ -67,7 +67,7 @@
           "offtime_duration_min": "Minimum time (minutes) the device must stay off after being deactivated.",
           "activate_actions": "Actions to execute when the device is activated.",
           "deactivate_actions": "Actions to execute when the device is deactivated.",
-          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated and will not be re-enabled until the next daily reset.",
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
           "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
@@ -114,7 +114,7 @@
           "activate_actions": "Actions to execute when the device is activated.",
           "deactivate_actions": "Actions to execute when the device is deactivated.",
           "power_divide_factor": "Divide the excess power by this factor before applying it to the power control entity (e.g. for three-phase devices set to 3).",
-          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated and will not be re-enabled until the next daily reset.",
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
           "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
@@ -176,7 +176,7 @@
           "offtime_duration_min": "Minimum time (minutes) the device must stay off after being deactivated.",
           "activate_actions": "Actions to execute when the device is activated.",
           "deactivate_actions": "Actions to execute when the device is deactivated.",
-          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated and will not be re-enabled until the next daily reset.",
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
           "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
@@ -223,7 +223,7 @@
           "activate_actions": "Actions to execute when the device is activated.",
           "deactivate_actions": "Actions to execute when the device is deactivated.",
           "power_divide_factor": "Divide the excess power by this factor before applying it to the power control entity (e.g. for three-phase devices set to 3).",
-          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated.",
+          "standby_power": "If the device is on and its measured power drops below this threshold (watts), it is immediately deactivated and will not be re-enabled until the next daily reset.",
           "min_daily_runtime": "Force the device on at the off-peak time if it has not yet accumulated this many minutes of runtime today.",
           "max_daily_runtime": "Switch the device off once it has accumulated this many minutes of runtime today.",
           "offpeak_time": "Time of day at which the device is force-started if its minimum daily runtime has not been reached."
