@@ -82,15 +82,16 @@ Devices are sorted by their **priority value** (1 = highest). The algorithm proc
 ### Main Configuration
 
 Configure once per Home Assistant instance. These settings control the grid monitoring and algorithm timing.
+All power-related sensor values and configuration inputs are expected to be in **Watt (W)**.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | **Refresh period** | Number (s) | 30 | How often (in seconds) the algorithm re-evaluates device states. |
-| **Grid consumption entity** | Entity (Power) | — | Sensor reporting current grid import/export power, negative means exporting to the grid. |
-| **Power production entity** | Entity (Power) | — | Sensor reporting total PV production power, must always be positive. Leave empty if not available. |
+| **Grid consumption entity** | Entity (Power) | — | Sensor reporting current grid import/export power in watts, negative means exporting to the grid. |
+| **Power production entity** | Entity (Power) | — | Sensor reporting total PV production power in watts, must always be positive. Leave empty if not available. |
 | **Subscribe to state-change events** | Boolean | False | When enabled, the algorithm also reacts immediately to sensor state-change events instead of only polling. |
 | **Battery state of charge entity** | Entity (%) | — | Sensor reporting the battery state of charge in percent. Leave empty if no battery is present. |
-| **Battery consumption entity** | Entity (Power) | — | Sensor reporting current battery discharge power, negative means the battery is charging. Leave empty if no battery is present. |
+| **Battery consumption entity** | Entity (Power) | — | Sensor reporting current battery discharge power in watts, negative means the battery is charging. Leave empty if no battery is present. |
 | **Daily reset time** | Time | 05:00 | Time of day at which daily runtimes are reset. |
 
 ### Basic Device Configuration
@@ -102,7 +103,7 @@ Configure for on/off devices (switches, boolean entities).
 | **Name** | String | — | A friendly name for this device. |
 | **Controlled entity** | Entity | — | The switch, boolean, or similar entity that physically turns this device on or off. |
 | **Nominal power** | Number (W) | — | Expected power consumption when the device is turned on (watts). |
-| **Power sensor entity** | Entity (Power) | — | Sensor reporting the actual power consumption of this device. Used instead of nominal power once the device is on. |
+| **Power sensor entity** | Entity (Power) | — | Sensor reporting the actual power consumption of this device in watts. Used instead of nominal power once the device is on. |
 | **Check usable template** | Template | — | A template that evaluates to true when this device is eligible to be switched on. |
 | **Activation delay** | Number (min) | 0 | Minimum time (minutes) of sufficient excess power before the device is turned on. |
 | **Minimum ON time** | Number (min) | 30 | Minimum time (minutes) the device must stay on after being activated. |
@@ -127,6 +128,10 @@ For devices that support power adjustment (immersion heaters, pool pumps, EV cha
 | **Power step** | Number (W) | 230 | Increment by which the power is raised or lowered each cycle (watts). |
 | **Minimum duration per power level** | Number (min) | 30 | Minimum time (minutes) the device must hold a power level before it is changed again. |
 | **Power divide factor** | Number | 1 | Divide the power by this factor before applying it to the power control entity (e.g. convert to ampere for wallboxes). |
+
+> [!NOTE]
+> All power sensors and power configuration values must use watts (W).  
+> The **Power divide factor** only transforms the outgoing control value written to the power control entity.
 
 ### Custom Actions
 
