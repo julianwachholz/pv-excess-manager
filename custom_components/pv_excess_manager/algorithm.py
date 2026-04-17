@@ -408,8 +408,17 @@ class PVExcessManagerAlgorithm:
             # instead of a reduction to the appropriate lower power step.
             effective_virtual_excess = virtual_excess + max(0.0, device.requested_power - device.current_power)
 
+            # Phase-switching wallboxes must use the actual virtual_excess for both the surplus
+            # check and the target power calculation. The requested_power vs current_power gap can
+            # be very large during a phase transition (e.g. 5040 W requested but only 1472 W
+            # drawn), which would inflate effective_virtual_excess far beyond the real available
+            # power and create a self-reinforcing loop that keeps the wallbox locked at the wrong
+            # phase/power level. For non-phase-switching devices the effective excess remains
+            # appropriate to avoid premature deactivation during normal ramp-up.
+            power_calc_excess = virtual_excess if device.is_phase_switching_wallbox else effective_virtual_excess
+
             if device.can_change_power:
-                potential_power = cls._get_variable_power(effective_virtual_excess, device)
+                potential_power = cls._get_variable_power(power_calc_excess, device)
                 is_surplus_insufficient = potential_power == 0
             else:
                 is_surplus_insufficient = virtual_excess < device.current_power
@@ -460,7 +469,7 @@ class PVExcessManagerAlgorithm:
                 device.reset_deactivate_delay()
 
             if device.can_change_power:
-                requested_power = cls._get_variable_power(effective_virtual_excess, device)
+                requested_power = cls._get_variable_power(power_calc_excess, device)
                 requested_power = cls._adjust_phase_switching_power(device, requested_power)
                 # Compare against device.requested_power (the previously sent command) rather
                 # than device.current_power (actual measurement). This ensures a reduction is
