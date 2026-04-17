@@ -632,7 +632,7 @@ class ManagedDevice:
         if self.daily_runtime >= self.max_daily_runtime:
             # TODO: Allow change if device is ON here; it means it should be turned off
             logger.debug(
-                "%s not usable: daily_runtime %d >= %d max_daily_runtime",
+                "%s not usable: daily_runtime %s >= %s max_daily_runtime",
                 self.name,
                 self.daily_runtime,
                 self.max_daily_runtime,
