@@ -248,7 +248,7 @@ class PVExcessManagerAlgorithm:
                         # Account for power already consumed by the device (e.g. via power sensor while inactive).
                         requested_power = max(
                             device.power_nominal,
-                            cls._get_variable_power(virtual_excess + device.current_power, device),
+                            cls._get_variable_power(virtual_excess, device),
                         )
                         requested_power = cls._adjust_phase_switching_power(device, requested_power)
 
@@ -263,7 +263,7 @@ class PVExcessManagerAlgorithm:
 
                 if device.can_change_power:
                     # Account for power already consumed by the device (e.g. via power sensor while inactive)
-                    requested_power = cls._get_variable_power(virtual_excess + device.current_power, device)
+                    requested_power = cls._get_variable_power(virtual_excess, device)
                     requested_power = cls._adjust_phase_switching_power(device, requested_power)
                     if requested_power == 0:
                         device.reset_activate_delay()
