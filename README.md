@@ -130,7 +130,7 @@ For devices that support power adjustment (immersion heaters, pool pumps, EV cha
 | **Power divide factor** | Number | 1 | Divide the power by this factor before applying it to the power control entity (e.g. convert to ampere for wallboxes). |
 
 > [!NOTE]
-> All power sensors and power configuration values must use watts (W).  
+> All power sensors and power configuration values must use watts (W).
 > The **Power divide factor** only transforms the outgoing control value written to the power control entity.
 
 ### Custom Actions
