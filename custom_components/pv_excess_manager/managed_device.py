@@ -408,7 +408,19 @@ class ManagedDevice:
             service_data["option"] = option
             await self.hass.services.async_call(domain, "select_option", service_data, blocking=False)
 
-    async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912, PLR0915
+    def _power_entity_value(self, requested_power_for_service: float, requested_phases: int) -> float:
+        """
+        Calculate the value to write to power_entity_id for a given power target.
+
+        For phase-switching wallboxes this converts watts to amps (clamped to min/max current).
+        For other variable-power devices it applies the power_divide_factor.
+        """
+        if self.is_phase_switching_wallbox and requested_power_for_service > 0:
+            amps = requested_power_for_service / (self.get_voltage() * requested_phases)
+            return max(self.min_current, min(amps, self.max_current))
+        return requested_power_for_service / self.power_divide_factor
+
+    async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912
         """
         Apply an action to a managed device.
 
@@ -456,12 +468,9 @@ class ManagedDevice:
             default_action = set_entity_value
 
             if self.power_entity_id:
-                requested_power = requested_power_for_service / self.power_divide_factor
+                requested_power = self._power_entity_value(requested_power_for_service, requested_phases)
                 target_entity = self.power_entity_id
                 if self.is_phase_switching_wallbox and requested_power_for_service > 0:
-                    voltage = self.get_voltage()
-                    requested_power = requested_power_for_service / (voltage * requested_phases)
-                    requested_power = max(self.min_current, min(requested_power, self.max_current))
                     script_variables["requested_power"] = requested_power
             elif not actions:
                 msg = f"Device {self.name} cannot change power because no actions and no power_entity_id are defined."
@@ -486,12 +495,7 @@ class ManagedDevice:
                 if self.power_entity_id:
                     # Set the correct power/current on the dedicated power entity before activating
                     # to prevent the device from briefly drawing max current (overshoot) on startup.
-                    # This mirrors the logic used in ACTION_CHANGE_POWER.
-                    power_value = requested_power_for_service / self.power_divide_factor
-                    if self.is_phase_switching_wallbox and requested_power_for_service > 0:
-                        voltage = self.get_voltage()
-                        power_value = requested_power_for_service / (voltage * requested_phases)
-                        power_value = max(self.min_current, min(power_value, self.max_current))
+                    power_value = self._power_entity_value(requested_power_for_service, requested_phases)
                     await set_entity_value(self.hass, self.power_entity_id, power_value)
                 else:
                     await set_entity_value(self.hass, target_entity, requested_power)
