@@ -408,7 +408,7 @@ class ManagedDevice:
             service_data["option"] = option
             await self.hass.services.async_call(domain, "select_option", service_data, blocking=False)
 
-    async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912
+    async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912, PLR0915
         """
         Apply an action to a managed device.
 
@@ -483,7 +483,18 @@ class ManagedDevice:
             if self.is_phase_switching_wallbox and requested_phases != self.get_current_phase_count():
                 await self.apply_phase_switch(requested_phases)
             if self.can_change_power and action_type == ACTION_ACTIVATE:
-                await set_entity_value(self.hass, target_entity, requested_power)
+                if self.power_entity_id:
+                    # Set the correct power/current on the dedicated power entity before activating
+                    # to prevent the device from briefly drawing max current (overshoot) on startup.
+                    # This mirrors the logic used in ACTION_CHANGE_POWER.
+                    power_value = requested_power_for_service / self.power_divide_factor
+                    if self.is_phase_switching_wallbox and requested_power_for_service > 0:
+                        voltage = self.get_voltage()
+                        power_value = requested_power_for_service / (voltage * requested_phases)
+                        power_value = max(self.min_current, min(power_value, self.max_current))
+                    await set_entity_value(self.hass, self.power_entity_id, power_value)
+                else:
+                    await set_entity_value(self.hass, target_entity, requested_power)
             await default_action(self.hass, target_entity, requested_power)
 
         self._requested_phases = None
