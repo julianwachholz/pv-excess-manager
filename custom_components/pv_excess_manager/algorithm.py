@@ -237,13 +237,13 @@ class PVExcessManagerAlgorithm:
                     # immediately the moment it becomes usable (e.g. when a car is plugged in).
                     if device.can_change_power:
                         if cls._get_variable_power(virtual_excess, device) > 0:
-                            device.is_activate_delay_passed()
+                            device.tick_activate_delay()
                         else:
                             device.reset_activate_delay()
                     else:
                         additional_power_needed = max(0.0, device.power_nominal - device.current_power)
                         if virtual_excess >= additional_power_needed:
-                            device.is_activate_delay_passed()
+                            device.tick_activate_delay()
                         else:
                             device.reset_activate_delay()
                     continue
