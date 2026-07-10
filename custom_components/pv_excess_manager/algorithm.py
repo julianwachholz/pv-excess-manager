@@ -14,6 +14,22 @@ class PVExcessManagerAlgorithm:
     """Algorithm that devices which actions will be made for managed devices."""
 
     @staticmethod
+    def _sync_activate_delay(device: ManagedDevice, should_run: bool) -> None:
+        """Start or reset the activation delay timer based on current conditions."""
+        if should_run:
+            device.ensure_activate_delay_started()
+        else:
+            device.reset_activate_delay()
+
+    @staticmethod
+    def _sync_deactivate_delay(device: ManagedDevice, should_run: bool) -> None:
+        """Start or reset the deactivation delay timer based on current conditions."""
+        if should_run:
+            device.ensure_deactivate_delay_started()
+        else:
+            device.reset_deactivate_delay()
+
+    @staticmethod
     def _get_variable_power(available_power: float, device: ManagedDevice) -> float:
         """Calculate maximum power a device may use."""
         power_min = max(device.power_nominal, 0)
@@ -231,7 +247,22 @@ class PVExcessManagerAlgorithm:
                 device.reset_deactivate_delay()
 
                 if not device.is_usable:
-                    # Device is locked, unusable by template or max daily runtime reached
+                    # Device is not currently usable (locked, template returned false, daily
+                    # runtime exceeded, etc.). Still start the activation timer in the background
+                    # when sufficient PV excess is available, so the device can be turned on
+                    # immediately as soon as it becomes usable again.
+                    if device.can_change_power:
+                        cls._sync_activate_delay(
+                            device,
+                            cls._get_variable_power(virtual_excess, device) > 0,
+                        )
+                    else:
+                        # Intentionally clamp at 0: if an inactive device is already consuming
+                        # nominal power or more (e.g. standby or pre-charge consumption measured
+                        # by a power sensor), no additional PV surplus is needed to satisfy the
+                        # activation condition.
+                        additional_power_needed = max(0.0, device.power_nominal - device.current_power)
+                        cls._sync_activate_delay(device, virtual_excess >= additional_power_needed)
                     continue
 
                 if device.disabled_due_to_standby:
@@ -332,6 +363,10 @@ class PVExcessManagerAlgorithm:
             # prevent full deactivation/activation, not power level changes.
             if device.is_locked:
                 if not (device.can_change_power and not device.is_power_locked):
+                    cls._sync_deactivate_delay(
+                        device,
+                        not device.should_be_forced_offpeak() and virtual_excess < device.current_power,
+                    )
                     logger.debug("Device %s is locked, ignoring.", device.name)
                     virtual_excess -= device.current_power
                     total_requested += device.requested_power
@@ -450,8 +485,16 @@ class PVExcessManagerAlgorithm:
                     total_requested += requested_power
                     break
 
-                # Locked devices must not be deactivated; the on-duration takes precedence.
-                if not device.is_locked and device.is_deactivate_delay_passed():
+                # This background timer check is separate from the earlier `if device.is_locked`
+                # branch that continues when `not (device.can_change_power and not
+                # device.is_power_locked)`: those devices cannot adjust power at all, while this
+                # path only applies after a variable-power device has already been evaluated and,
+                # if needed, stepped down to its minimum power. In both cases the timer should run
+                # during the minimum-runtime lock so shutdown is allowed immediately once the lock
+                # expires.
+                if device.is_locked:
+                    device.ensure_deactivate_delay_started()
+                elif device.is_deactivate_delay_passed():
                     target_action = (device.unique_id, 0)
                     device.reset_deactivate_delay()
                     break
