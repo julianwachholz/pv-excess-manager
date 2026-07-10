@@ -234,13 +234,16 @@ class PVExcessManagerAlgorithm:
                     # Device is not currently usable (locked, template returned false, daily
                     # runtime exceeded, etc.). Still start the activation timer in the background
                     # when sufficient PV excess is available, so the device can be turned on
-                    # immediately the moment it becomes usable (e.g. when a car is plugged in).
+                    # immediately as soon as it becomes usable (e.g. when a car is plugged in).
                     if device.can_change_power:
                         if cls._get_variable_power(virtual_excess, device) > 0:
                             device.ensure_activate_delay_started()
                         else:
                             device.reset_activate_delay()
                     else:
+                        # Intentionally clamp at 0: if an inactive device is already consuming
+                        # nominal power or more (e.g. via a power sensor), no additional PV
+                        # surplus is needed to satisfy the activation condition.
                         additional_power_needed = max(0.0, device.power_nominal - device.current_power)
                         if virtual_excess >= additional_power_needed:
                             device.ensure_activate_delay_started()
