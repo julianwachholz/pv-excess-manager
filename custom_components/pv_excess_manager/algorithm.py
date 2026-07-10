@@ -14,6 +14,22 @@ class PVExcessManagerAlgorithm:
     """Algorithm that devices which actions will be made for managed devices."""
 
     @staticmethod
+    def _sync_activate_delay(device: ManagedDevice, should_run: bool) -> None:
+        """Start or reset the activation delay timer based on current conditions."""
+        if should_run:
+            device.ensure_activate_delay_started()
+        else:
+            device.reset_activate_delay()
+
+    @staticmethod
+    def _sync_deactivate_delay(device: ManagedDevice, should_run: bool) -> None:
+        """Start or reset the deactivation delay timer based on current conditions."""
+        if should_run:
+            device.ensure_deactivate_delay_started()
+        else:
+            device.reset_deactivate_delay()
+
+    @staticmethod
     def _get_variable_power(available_power: float, device: ManagedDevice) -> float:
         """Calculate maximum power a device may use."""
         power_min = max(device.power_nominal, 0)
@@ -236,20 +252,17 @@ class PVExcessManagerAlgorithm:
                     # when sufficient PV excess is available, so the device can be turned on
                     # immediately as soon as it becomes usable again.
                     if device.can_change_power:
-                        if cls._get_variable_power(virtual_excess, device) > 0:
-                            device.ensure_activate_delay_started()
-                        else:
-                            device.reset_activate_delay()
+                        cls._sync_activate_delay(
+                            device,
+                            cls._get_variable_power(virtual_excess, device) > 0,
+                        )
                     else:
                         # Intentionally clamp at 0: if an inactive device is already consuming
                         # nominal power or more (e.g. standby or pre-charge consumption measured
                         # by a power sensor), no additional PV surplus is needed to satisfy the
                         # activation condition.
                         additional_power_needed = max(0.0, device.power_nominal - device.current_power)
-                        if virtual_excess >= additional_power_needed:
-                            device.ensure_activate_delay_started()
-                        else:
-                            device.reset_activate_delay()
+                        cls._sync_activate_delay(device, virtual_excess >= additional_power_needed)
                     continue
 
                 if device.disabled_due_to_standby:
@@ -350,12 +363,10 @@ class PVExcessManagerAlgorithm:
             # prevent full deactivation/activation, not power level changes.
             if device.is_locked:
                 if not (device.can_change_power and not device.is_power_locked):
-                    if device.should_be_forced_offpeak():
-                        device.reset_deactivate_delay()
-                    elif virtual_excess < device.current_power:
-                        device.ensure_deactivate_delay_started()
-                    else:
-                        device.reset_deactivate_delay()
+                    cls._sync_deactivate_delay(
+                        device,
+                        not device.should_be_forced_offpeak() and virtual_excess < device.current_power,
+                    )
                     logger.debug("Device %s is locked, ignoring.", device.name)
                     virtual_excess -= device.current_power
                     total_requested += device.requested_power
