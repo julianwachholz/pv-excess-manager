@@ -237,13 +237,13 @@ class PVExcessManagerAlgorithm:
                     # immediately the moment it becomes usable (e.g. when a car is plugged in).
                     if device.can_change_power:
                         if cls._get_variable_power(virtual_excess, device) > 0:
-                            device.tick_activate_delay()
+                            device.ensure_activate_delay_started()
                         else:
                             device.reset_activate_delay()
                     else:
                         additional_power_needed = max(0.0, device.power_nominal - device.current_power)
                         if virtual_excess >= additional_power_needed:
-                            device.tick_activate_delay()
+                            device.ensure_activate_delay_started()
                         else:
                             device.reset_activate_delay()
                     continue
@@ -349,7 +349,7 @@ class PVExcessManagerAlgorithm:
                     if device.should_be_forced_offpeak():
                         device.reset_deactivate_delay()
                     elif virtual_excess < device.current_power:
-                        device.tick_deactivate_delay()
+                        device.ensure_deactivate_delay_started()
                     else:
                         device.reset_deactivate_delay()
                     logger.debug("Device %s is locked, ignoring.", device.name)
@@ -474,7 +474,7 @@ class PVExcessManagerAlgorithm:
                 # should still run in the background so shutdown is allowed immediately
                 # once the minimum runtime lock expires.
                 if device.is_locked:
-                    device.tick_deactivate_delay()
+                    device.ensure_deactivate_delay_started()
                 elif device.is_deactivate_delay_passed():
                     target_action = (device.unique_id, 0)
                     device.reset_deactivate_delay()
