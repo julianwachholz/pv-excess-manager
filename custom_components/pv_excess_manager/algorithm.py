@@ -232,7 +232,7 @@ class PVExcessManagerAlgorithm:
 
                 if not device.is_usable:
                     # Device is not currently usable (locked, template returned false, daily
-                    # runtime exceeded, etc.). Still tick the activation timer in the background
+                    # runtime exceeded, etc.). Still start the activation timer in the background
                     # when sufficient PV excess is available, so the device can be turned on
                     # immediately the moment it becomes usable (e.g. when a car is plugged in).
                     if device.can_change_power:
@@ -470,8 +470,8 @@ class PVExcessManagerAlgorithm:
                     total_requested += requested_power
                     break
 
-                # Locked devices must not be deactivated yet, but the deactivation timer
-                # should still run in the background so shutdown is allowed immediately
+                # Locked devices cannot be deactivated while locked, but the deactivation
+                # timer should still run in the background so shutdown is allowed immediately
                 # once the minimum runtime lock expires.
                 if device.is_locked:
                     device.ensure_deactivate_delay_started()
