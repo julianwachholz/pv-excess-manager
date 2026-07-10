@@ -474,11 +474,12 @@ class PVExcessManagerAlgorithm:
                     total_requested += requested_power
                     break
 
-                # This background timer check is separate from the earlier locked-device branch:
-                # those devices cannot adjust power at all, while this path only applies after a
-                # variable-power device has already been evaluated and, if needed, stepped down to
-                # its minimum power. In both cases the timer should run during the minimum-runtime
-                # lock so shutdown is allowed immediately once the lock expires.
+                # This background timer check is separate from the "device is locked and cannot
+                # adjust power" branch above: those devices cannot adjust power at all, while this
+                # path only applies after a variable-power device has already been evaluated and,
+                # if needed, stepped down to its minimum power. In both cases the timer should run
+                # during the minimum-runtime lock so shutdown is allowed immediately once the lock
+                # expires.
                 if device.is_locked:
                     device.ensure_deactivate_delay_started()
                 elif device.is_deactivate_delay_passed():
