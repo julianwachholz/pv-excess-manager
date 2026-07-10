@@ -242,8 +242,9 @@ class PVExcessManagerAlgorithm:
                             device.reset_activate_delay()
                     else:
                         # Intentionally clamp at 0: if an inactive device is already consuming
-                        # nominal power or more (e.g. via a power sensor), no additional PV
-                        # surplus is needed to satisfy the activation condition.
+                        # nominal power or more (e.g. standby or pre-charge consumption measured
+                        # by a power sensor), no additional PV surplus is needed to satisfy the
+                        # activation condition.
                         additional_power_needed = max(0.0, device.power_nominal - device.current_power)
                         if virtual_excess >= additional_power_needed:
                             device.ensure_activate_delay_started()
@@ -473,9 +474,11 @@ class PVExcessManagerAlgorithm:
                     total_requested += requested_power
                     break
 
-                # Locked devices cannot be deactivated while locked, but the deactivation
-                # timer should still run in the background so shutdown is allowed immediately
-                # once the minimum runtime lock expires.
+                # This background timer check is separate from the earlier locked-device branch:
+                # those devices cannot adjust power at all, while this path only applies after a
+                # variable-power device has already been evaluated and, if needed, stepped down to
+                # its minimum power. In both cases the timer should run during the minimum-runtime
+                # lock so shutdown is allowed immediately once the lock expires.
                 if device.is_locked:
                     device.ensure_deactivate_delay_started()
                 elif device.is_deactivate_delay_passed():
