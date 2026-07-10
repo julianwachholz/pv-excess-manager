@@ -346,6 +346,12 @@ class PVExcessManagerAlgorithm:
             # prevent full deactivation/activation, not power level changes.
             if device.is_locked:
                 if not (device.can_change_power and not device.is_power_locked):
+                    if device.should_be_forced_offpeak():
+                        device.reset_deactivate_delay()
+                    elif virtual_excess < device.current_power:
+                        device.tick_deactivate_delay()
+                    else:
+                        device.reset_deactivate_delay()
                     logger.debug("Device %s is locked, ignoring.", device.name)
                     virtual_excess -= device.current_power
                     total_requested += device.requested_power
@@ -464,8 +470,12 @@ class PVExcessManagerAlgorithm:
                     total_requested += requested_power
                     break
 
-                # Locked devices must not be deactivated; the on-duration takes precedence.
-                if not device.is_locked and device.is_deactivate_delay_passed():
+                # Locked devices must not be deactivated yet, but the deactivation timer
+                # should still run in the background so shutdown is allowed immediately
+                # once the minimum runtime lock expires.
+                if device.is_locked:
+                    device.tick_deactivate_delay()
+                elif device.is_deactivate_delay_passed():
                     target_action = (device.unique_id, 0)
                     device.reset_deactivate_delay()
                     break

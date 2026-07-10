@@ -752,6 +752,12 @@ class ManagedDevice:
 
         return (now() - self._pending_deactivate) >= self.deactivate_delay
 
+    def tick_deactivate_delay(self):
+        """Start the deactivation delay timer if not already running (background tick)."""
+        if self._pending_deactivate is None and self.deactivate_delay:
+            self._pending_deactivate = now()
+            logger.debug("Started background deactivation delay timer for %s", self.name)
+
     def reset_deactivate_delay(self):
         """Reset the deactivate delay timer."""
         self._pending_deactivate = None
