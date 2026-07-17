@@ -437,13 +437,15 @@ class ManagedDevice:
 
             min_value = max(self.min_current, min_value)
             max_value = min(self.max_current, max_value)
+            max_value = max(max_value, min_value)
             amps = max(min_value, min(amps, max_value))
 
             if step and step > 0:
+                # Always round down to avoid commanding more power than requested.
                 steps = max(0, math.floor((amps - min_value) / step))
                 amps = min_value + (steps * step)
 
-            return max(min_value, min(amps, max_value))
+            return amps
         return requested_power_for_service / self.power_divide_factor
 
     async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912, PLR0915
