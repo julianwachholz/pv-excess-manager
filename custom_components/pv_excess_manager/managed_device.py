@@ -437,11 +437,19 @@ class ManagedDevice:
 
             min_value = max(self.min_current, min_value)
             max_value = min(self.max_current, max_value)
+            if max_value < min_value:
+                logger.warning(
+                    "Power entity limits for %s are inconsistent (min=%s, max=%s). Falling back to min.",
+                    self.name,
+                    min_value,
+                    max_value,
+                )
             max_value = max(max_value, min_value)
             amps = max(min_value, min(amps, max_value))
 
             if step and step > 0:
                 # Always round down to avoid commanding more power than requested.
+                # Defensive `max(0, ...)`: protects against floating-point edge cases.
                 steps = max(0, math.floor((amps - min_value) / step))
                 amps = min_value + (steps * step)
 
