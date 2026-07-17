@@ -1,6 +1,7 @@
 """A managed device may be controlled by our excess manager."""
 
 import logging
+import math
 from datetime import datetime, time, timedelta
 from typing import TYPE_CHECKING
 
@@ -417,10 +418,32 @@ class ManagedDevice:
         """
         if self.is_phase_switching_wallbox and requested_power_for_service > 0:
             amps = requested_power_for_service / (self.get_voltage() * requested_phases)
-            return max(self.min_current, min(amps, self.max_current))
+            amps = max(self.min_current, min(amps, self.max_current))
+
+            if self.power_entity_id is not None:
+                power_state = self.hass.states.get(self.power_entity_id)
+                if power_state is not None:
+                    step_attr = power_state.attributes.get("step")
+                    min_attr = power_state.attributes.get("min")
+                    max_attr = power_state.attributes.get("max")
+                    try:
+                        step = float(step_attr) if step_attr is not None else None
+                        min_value = float(min_attr) if min_attr is not None else self.min_current
+                        max_value = float(max_attr) if max_attr is not None else self.max_current
+                    except (TypeError, ValueError):
+                        step = None
+                        min_value = self.min_current
+                        max_value = self.max_current
+
+                    if step and step > 0:
+                        steps = math.floor((amps - min_value) / step)
+                        amps = min_value + (steps * step)
+                    amps = max(min_value, min(amps, max_value))
+
+            return amps
         return requested_power_for_service / self.power_divide_factor
 
-    async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912
+    async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912, PLR0915
         """
         Apply an action to a managed device.
 
@@ -438,6 +461,9 @@ class ManagedDevice:
         requested_power_for_service = requested_power
         if self.is_phase_switching_wallbox and requested_power > 0:
             requested_power_for_service = self.clamp_power_to_phase(requested_power, requested_phases)
+            if self.power_entity_id:
+                effective_amps = self._power_entity_value(requested_power_for_service, requested_phases)
+                requested_power_for_service = effective_amps * self.get_voltage() * requested_phases
 
         self.requested_power = requested_power_for_service
 
