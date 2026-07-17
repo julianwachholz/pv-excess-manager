@@ -301,7 +301,7 @@ class ManagedDevice:
                 phase = int(digits or value.strip())
             else:
                 phase = int(float(value))
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return None
 
         if phase in {1, 2, 3}:
