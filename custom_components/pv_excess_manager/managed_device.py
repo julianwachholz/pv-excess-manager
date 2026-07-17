@@ -418,7 +418,9 @@ class ManagedDevice:
         """
         if self.is_phase_switching_wallbox and requested_power_for_service > 0:
             amps = requested_power_for_service / (self.get_voltage() * requested_phases)
-            amps = max(self.min_current, min(amps, self.max_current))
+            min_value = self.min_current
+            max_value = self.max_current
+            step = None
 
             if self.power_entity_id is not None:
                 power_state = self.hass.states.get(self.power_entity_id)
@@ -431,16 +433,17 @@ class ManagedDevice:
                         min_value = float(min_attr) if min_attr is not None else self.min_current
                         max_value = float(max_attr) if max_attr is not None else self.max_current
                     except (TypeError, ValueError):
-                        step = None
-                        min_value = self.min_current
-                        max_value = self.max_current
+                        pass
 
-                    if step and step > 0:
-                        steps = math.floor((amps - min_value) / step)
-                        amps = min_value + (steps * step)
-                    amps = max(min_value, min(amps, max_value))
+            min_value = max(self.min_current, min_value)
+            max_value = min(self.max_current, max_value)
+            amps = max(min_value, min(amps, max_value))
 
-            return amps
+            if step and step > 0:
+                steps = max(0, math.floor((amps - min_value) / step))
+                amps = min_value + (steps * step)
+
+            return max(min_value, min(amps, max_value))
         return requested_power_for_service / self.power_divide_factor
 
     async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912, PLR0915
