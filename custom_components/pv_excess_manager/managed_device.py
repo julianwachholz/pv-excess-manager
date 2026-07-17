@@ -430,8 +430,8 @@ class ManagedDevice:
                     max_attr = power_state.attributes.get("max")
                     try:
                         step = float(step_attr) if step_attr is not None else None
-                        min_value = float(min_attr) if min_attr is not None else self.min_current
-                        max_value = float(max_attr) if max_attr is not None else self.max_current
+                        min_value = float(min_attr) if min_attr is not None else min_value
+                        max_value = float(max_attr) if max_attr is not None else max_value
                     except (TypeError, ValueError):
                         pass
 
