@@ -8,7 +8,6 @@ from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.components.input_number import DOMAIN as INPUT_NUMBER_DOMAIN
 from homeassistant.components.light.const import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
-from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Context
 from homeassistant.helpers import config_validation as cv
@@ -98,13 +97,6 @@ class ManagedDevice:
     power_entity_id: str | None = None
     device_type: str = const.CONF_DEVICE_BASIC
 
-    # Phase-switching wallbox specific attributes
-    min_current: float = const.DEFAULT_MIN_CURRENT
-    max_current: float = const.DEFAULT_MAX_CURRENT
-    current_phases_entity_id: str | None = None
-    voltage: float = const.DEFAULT_VOLTAGE
-    _requested_phases: int | None = None
-
     _battery_min_soc: float | Template = 0
     standby_power: float = 0
     disabled_due_to_standby: bool = False
@@ -155,29 +147,7 @@ class ManagedDevice:
         self.entity_id = cv.entity_id_or_uuid(device_config.get(const.CONF_ENTITY_ID))
         self.device_type = cv.string(device_config.get(const.CONF_DEVICE_TYPE) or const.CONF_DEVICE_BASIC)
 
-        if self.is_phase_switching_wallbox:
-            self.min_current = cv.positive_float(
-                device_config.get(const.CONF_MIN_CURRENT) or const.DEFAULT_MIN_CURRENT
-            )
-            self.max_current = cv.positive_float(
-                device_config.get(const.CONF_MAX_CURRENT) or const.DEFAULT_MAX_CURRENT
-            )
-            if self.min_current > self.max_current:
-                msg = (
-                    f"Device {self.name} configuration is incorrect. "
-                    f"min_current ({self.min_current!r}) must be <= max_current ({self.max_current!r})."
-                )
-                raise ConfigurationError(msg)
-
-            phases_entity = device_config.get(const.CONF_CURRENT_PHASES_ENTITY_ID)
-            if phases_entity is None:
-                msg = f"Device {self.name} requires current_phases_entity_id."
-                raise ConfigurationError(msg)
-            self.current_phases_entity_id = cv.entity_id_or_uuid(phases_entity)
-            self.voltage = cv.positive_float(device_config.get(const.CONF_VOLTAGE) or const.DEFAULT_VOLTAGE)
-            self.power_nominal = self.min_power_for_phase(self.min_supported_phase)
-        else:
-            self.power_nominal = cv.positive_float(device_config.get(const.CONF_NOMINAL_POWER) or 0)
+        self.power_nominal = cv.positive_float(device_config.get(const.CONF_NOMINAL_POWER) or 0)
 
         if self.power_nominal <= 0:
             msg = f"Device {self.name} nominal power ({self.power_nominal!r}) must be > 0."
@@ -187,14 +157,9 @@ class ManagedDevice:
             self.power_sensor_entity_id = cv.entity_id_or_uuid(power_sensor_entity_id)
 
         # Attributes for variable power devices
-        if self.is_phase_switching_wallbox:
-            self.power_max = self.max_power_for_phase(self.max_supported_phase)
-            self.power_step = 1
-            self.power_divide_factor = 1
-        else:
-            self.power_max = cv.positive_float(device_config.get(const.CONF_POWER_MAX) or 0)
-            self.power_step = cv.positive_float(device_config.get(const.CONF_POWER_STEP) or 0)
-            self.power_divide_factor = cv.positive_float(device_config.get(const.CONF_POWER_DIVIDE_FACTOR) or 1)
+        self.power_max = cv.positive_float(device_config.get(const.CONF_POWER_MAX) or 0)
+        self.power_step = cv.positive_float(device_config.get(const.CONF_POWER_STEP) or 0)
+        self.power_divide_factor = cv.positive_float(device_config.get(const.CONF_POWER_DIVIDE_FACTOR) or 1)
         if power_entity_id := device_config.get(const.CONF_POWER_ENTITY_ID):
             self.power_entity_id = cv.entity_id_or_uuid(power_entity_id)
 
@@ -255,170 +220,9 @@ class ManagedDevice:
         """Get a slug for this device."""
         return slugify(self.name).replace("-", "_")
 
-    @property
-    def is_phase_switching_wallbox(self) -> bool:
-        """Return whether this device is configured as a phase-switching wallbox."""
-        return self.device_type == const.CONF_DEVICE_PHASE_SWITCHING_WALLBOX
-
-    @property
-    def min_supported_phase(self) -> int:
-        """Return the minimum supported phase count."""
-        return min(self.supported_phase_counts())
-
-    @property
-    def max_supported_phase(self) -> int:
-        """Return the maximum supported phase count."""
-        return max(self.supported_phase_counts())
-
-    def supported_phase_counts(self) -> list[int]:
-        """Return supported phase counts from configured phase entity."""
-        if not self.is_phase_switching_wallbox:
-            return [1]
-
-        default = [1, 3]
-        if self.current_phases_entity_id is None:
-            return default
-
-        state = self.hass.states.get(self.current_phases_entity_id)
-        if state is None:
-            return default
-
-        options = state.attributes.get("options")
-        if not isinstance(options, list):
-            return default
-
-        parsed_options: set[int] = set()
-        for option in options:
-            if parsed := self._parse_phase_count(option):
-                parsed_options.add(parsed)
-        return sorted(parsed_options) if parsed_options else default
-
-    def _parse_phase_count(self, value) -> int | None:
-        """Parse a phase count value into an integer in the range 1..3."""
-        try:
-            if isinstance(value, str):
-                digits = "".join(char for char in value if char.isdigit())
-                phase = int(digits or value.strip())
-            else:
-                phase = int(float(value))
-        except TypeError, ValueError:
-            return None
-
-        if phase in {1, 2, 3}:
-            return phase
-        return None
-
-    def get_current_phase_count(self) -> int:
-        """Return the current active phase count."""
-        if not self.is_phase_switching_wallbox or self.current_phases_entity_id is None:
-            return 1
-
-        phase_state = self.hass.states.get(self.current_phases_entity_id)
-        if phase_state is None:
-            return self.min_supported_phase
-
-        parsed_phase = self._parse_phase_count(phase_state.state)
-        if parsed_phase is None:
-            return self.min_supported_phase
-        return parsed_phase
-
-    def get_voltage(self) -> float:
-        """Return voltage configured for the wallbox."""
-        if not self.is_phase_switching_wallbox:
-            return const.DEFAULT_VOLTAGE
-        return self.voltage
-
-    def min_power_for_phase(self, phase_count: int) -> float:
-        """Return minimum wallbox power for a given phase count."""
-        return self.min_current * self.get_voltage() * phase_count
-
-    def max_power_for_phase(self, phase_count: int) -> float:
-        """Return maximum wallbox power for a given phase count."""
-        return self.max_current * self.get_voltage() * phase_count
-
-    def phase_for_requested_power(self, requested_power: float) -> int:
-        """Return the best phase count for a requested power."""
-        if not self.is_phase_switching_wallbox:
-            return 1
-
-        current_phase = self.get_current_phase_count()
-        supported_phases = self.supported_phase_counts()
-
-        if requested_power <= 0 or len(supported_phases) == 1:
-            return current_phase
-
-        for phase_count in supported_phases:
-            min_power = self.min_power_for_phase(phase_count)
-            max_power = self.max_power_for_phase(phase_count)
-            if min_power <= requested_power <= max_power:
-                return phase_count
-
-        current_min = self.min_power_for_phase(current_phase)
-        current_max = self.max_power_for_phase(current_phase)
-        if current_min <= requested_power <= current_max:
-            return current_phase
-
-        if requested_power < current_min:
-            lower_phases = [phase for phase in supported_phases if phase < current_phase]
-            return max(lower_phases) if lower_phases else current_phase
-
-        higher_phases = [phase for phase in supported_phases if phase > current_phase]
-        return min(higher_phases) if higher_phases else current_phase
-
-    def clamp_power_to_phase(self, requested_power: float, phase_count: int) -> float:
-        """Clamp requested power to limits of a specific phase."""
-        if not self.is_phase_switching_wallbox:
-            return requested_power
-
-        if requested_power <= 0:
-            return 0
-
-        min_power = self.min_power_for_phase(phase_count)
-        max_power = self.max_power_for_phase(phase_count)
-        return max(min_power, min(requested_power, max_power))
-
-    def set_requested_phases(self, phase_count: int | None) -> None:
-        """Set target phase count for next action."""
-        self._requested_phases = phase_count
-
-    async def apply_phase_switch(self, phase_count: int) -> None:
-        """Write phase count target to the configured phase entity."""
-        if not self.is_phase_switching_wallbox or self.current_phases_entity_id is None:
-            return
-
-        domain = self.current_phases_entity_id.split(".", maxsplit=1)[0]
-        service_data = {"entity_id": self.current_phases_entity_id}
-
-        if domain in {NUMBER_DOMAIN, INPUT_NUMBER_DOMAIN}:
-            service_data["value"] = phase_count
-            await self.hass.services.async_call(domain, "set_value", service_data, blocking=False)
-            return
-
-        if domain == SELECT_DOMAIN:
-            phase_state = self.hass.states.get(self.current_phases_entity_id)
-            option = str(phase_count)
-            if phase_state:
-                options = phase_state.attributes.get("options") or []
-                matching_option = next(
-                    (candidate for candidate in options if self._parse_phase_count(candidate) == phase_count),
-                    None,
-                )
-                if matching_option is not None:
-                    option = matching_option
-            service_data["option"] = option
-            await self.hass.services.async_call(domain, "select_option", service_data, blocking=False)
-
-    def _power_entity_value(self, requested_power_for_service: float, requested_phases: int) -> float:
-        """
-        Calculate the value to write to power_entity_id for a given power target.
-
-        For phase-switching wallboxes this converts watts to amps (clamped to min/max current).
-        For other variable-power devices it applies the power_divide_factor.
-        """
-        if self.is_phase_switching_wallbox and requested_power_for_service > 0:
-            amps = requested_power_for_service / (self.get_voltage() * requested_phases)
-            return max(self.min_current, min(amps, self.max_current))
-        return requested_power_for_service / self.power_divide_factor
+    def _power_entity_value(self, requested_power: float) -> float:
+        """Calculate the value to write to power_entity_id for a given power target (applies the divide factor)."""
+        return requested_power / self.power_divide_factor
 
     async def _apply_action(self, action_type: str, requested_power: float):  # noqa: PLR0912
         """
@@ -434,17 +238,11 @@ class ManagedDevice:
             requested_power,
         )
 
-        requested_phases = self._requested_phases or self.get_current_phase_count()
-        requested_power_for_service = requested_power
-        if self.is_phase_switching_wallbox and requested_power > 0:
-            requested_power_for_service = self.clamp_power_to_phase(requested_power, requested_phases)
-
-        self.requested_power = requested_power_for_service
+        self.requested_power = requested_power
 
         action_context = Context()
         script_variables = {
-            "requested_power": requested_power_for_service / self.power_divide_factor,
-            "requested_phases": requested_phases,
+            "requested_power": requested_power / self.power_divide_factor,
             "current_power": self.current_power,
             "power_divide_factor": self.power_divide_factor,
         }
@@ -468,10 +266,8 @@ class ManagedDevice:
             default_action = set_entity_value
 
             if self.power_entity_id:
-                requested_power = self._power_entity_value(requested_power_for_service, requested_phases)
+                requested_power = self._power_entity_value(requested_power)
                 target_entity = self.power_entity_id
-                if self.is_phase_switching_wallbox and requested_power_for_service > 0:
-                    script_variables["requested_power"] = requested_power
             elif not actions:
                 msg = f"Device {self.name} cannot change power because no actions and no power_entity_id are defined."
                 raise RuntimeError(msg)
@@ -489,19 +285,15 @@ class ManagedDevice:
                 context=action_context,
             )
         else:
-            if self.is_phase_switching_wallbox and requested_phases != self.get_current_phase_count():
-                await self.apply_phase_switch(requested_phases)
             if self.can_change_power and action_type == ACTION_ACTIVATE:
                 if self.power_entity_id:
-                    # Set the correct power/current on the dedicated power entity before activating
-                    # to prevent the device from briefly drawing max current (overshoot) on startup.
-                    power_value = self._power_entity_value(requested_power_for_service, requested_phases)
+                    # Set the correct power on the dedicated power entity before activating
+                    # to prevent the device from briefly drawing maximum power (overshoot) on startup.
+                    power_value = self._power_entity_value(requested_power)
                     await set_entity_value(self.hass, self.power_entity_id, power_value)
                 else:
                     await set_entity_value(self.hass, target_entity, requested_power)
             await default_action(self.hass, target_entity, requested_power)
-
-        self._requested_phases = None
 
         if action_type in {ACTION_ACTIVATE, ACTION_DEACTIVATE}:
             self.reset_next_date_available(action_type)
@@ -606,11 +398,7 @@ class ManagedDevice:
             raise NotImplementedError(msg)
         power_entity_value = power_entity_state.state
 
-        if self.is_phase_switching_wallbox:
-            phase_count = self.get_current_phase_count()
-            self.current_power = float(power_entity_value) * self.get_voltage() * phase_count
-        else:
-            self.current_power = float(power_entity_value) * self.power_divide_factor
+        self.current_power = float(power_entity_value) * self.power_divide_factor
         logger.debug(
             "Set current_power to %s for device %s cause can_change_power and amps is %s",
             self.current_power,
@@ -780,8 +568,6 @@ class ManagedDevice:
     @property
     def power_nominal(self) -> float:
         """The nominal (minimum) power of the managed device."""
-        if self.is_phase_switching_wallbox:
-            return self.min_power_for_phase(self.min_supported_phase)
         return self._power_nominal
 
     @power_nominal.setter
@@ -791,8 +577,6 @@ class ManagedDevice:
     @property
     def power_max(self) -> float:
         """The maximum power of the managed device."""
-        if self.is_phase_switching_wallbox:
-            return self.max_power_for_phase(self.max_supported_phase)
         return get_template_or_value(self._power_max)
 
     @power_max.setter
@@ -802,8 +586,6 @@ class ManagedDevice:
     @property
     def power_step(self) -> float:
         """The power step of the managed device."""
-        if self.is_phase_switching_wallbox:
-            return max(1.0, self.get_voltage() * self.get_current_phase_count())
         return get_template_or_value(self._power_step)
 
     @power_step.setter

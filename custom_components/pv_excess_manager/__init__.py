@@ -2,12 +2,19 @@ import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.const import SERVICE_RELOAD
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import ConfigEntryError, HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.service import async_register_admin_service
 
-from .const import CONF_DEVICE_MAIN, CONF_DEVICE_TYPE, CONF_UNIQUE_ID, DOMAIN, PLATFORMS
+from .const import (
+    CONF_DEVICE_MAIN,
+    CONF_DEVICE_TYPE,
+    CONF_UNIQUE_ID,
+    DOMAIN,
+    PLATFORMS,
+    UNSUPPORTED_DEVICE_TYPES,
+)
 from .coordinator import PVExcessManagerCoordinator
 
 if TYPE_CHECKING:
@@ -61,6 +68,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.entry_id,
         entry.data,
     )
+
+    device_type = entry.data.get(CONF_DEVICE_TYPE)
+    if device_type in UNSUPPORTED_DEVICE_TYPES:
+        msg = (
+            f"Device type '{device_type}' is no longer supported. "
+            "Remove this device and add it again as a basic or variable power device."
+        )
+        raise ConfigEntryError(msg)
 
     hass.data.setdefault(DOMAIN, {})
 

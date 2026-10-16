@@ -58,10 +58,7 @@ async def async_setup_entry(
         return
 
     device = coordinator.get_device_by_unique_id(entry.data.get(const.CONF_UNIQUE_ID))
-    has_device_power_config = entry.data.get(const.CONF_NOMINAL_POWER) or (
-        entry.data.get(const.CONF_DEVICE_TYPE) == const.CONF_DEVICE_PHASE_SWITCHING_WALLBOX
-    )
-    if device is None and has_device_power_config:
+    if device is None and entry.data.get(const.CONF_NOMINAL_POWER):
         device = ManagedDevice(hass, entry.data, coordinator)
         coordinator.add_device(device)
         async_add_entities(
